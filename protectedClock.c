@@ -1,32 +1,8 @@
 #include <pthread.h>
 
+
 #include "clock.h"
 #include "protectedClock.h"
-
-
-// Initializes a ProtectedClock
-void initPClock(ProtectedClock * pClockPtr){
-	pClockPtr->time = zeroClock();
-	initializeSemaphore(pClockPtr->sem);
-}
-
-// Locks and unlocks a semaphore to increment a ProtectedClock
-void incrementPClock(ProtectedClock * pClockPtr, Clock increment){
-	pthred_mutex_lock(&pClockPtr->sem);
-	incrementClock(&pClockPtr->time, increment);
-	pthread_mutex_unlock(&pClockPtr->sem);
-}
-
-// Returns the value of the time in a ProtectedClock
-Clock getPClockTime(ProtectedClock * pClockPtr){
-	Clock time;
-
-	pthread_mutex_lock(&pClockPtr->sem);
-	copyTime(&time, pClockPtr->time);
-	pthread_mutex_unlock(&pClockPtr->sem);
-
-	return time;
-}
 
 // Initializes semaphore protecting the clock
 static void initializeSemaphore(pthread_mutex_t * mutex){
@@ -41,4 +17,29 @@ static void initializeSemaphore(pthread_mutex_t * mutex){
         // Initializes the mutex with the attributes struct
         pthread_mutex_init(mutex, &attributes);
 }
+
+// Initializes a ProtectedClock
+void initPClock(ProtectedClock * pClockPtr){
+	pClockPtr->time = zeroClock();
+	initializeSemaphore(&pClockPtr->sem);
+}
+
+// Locks and unlocks a semaphore to increment a ProtectedClock
+void incrementPClock(ProtectedClock * pClockPtr, Clock increment){
+	pthread_mutex_lock(&pClockPtr->sem);
+	incrementClock(&pClockPtr->time, increment);
+	pthread_mutex_unlock(&pClockPtr->sem);
+}
+
+// Returns the value of the time in a ProtectedClock
+Clock getPTime(ProtectedClock * pClockPtr){
+	Clock time;
+
+	pthread_mutex_lock(&pClockPtr->sem);
+	copyTime(&time, pClockPtr->time);
+	pthread_mutex_unlock(&pClockPtr->sem);
+
+	return time;
+}
+
 
