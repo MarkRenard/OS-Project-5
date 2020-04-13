@@ -2,6 +2,10 @@
 //
 // This file defines functions for manipulating a pid_t array.
 
+#include <stdbool.h>
+#include <stdlib.h>
+// #include <unistd.h>
+
 #include "constants.h"
 #include "perrorExit.h"
 
@@ -54,3 +58,25 @@ void removePid(pid_t * pidArray, pid_t pid){
 	perrorExit("removePid called on array that doesn't contain chosen pid");
 }
 
+// Returns true if each entry in the pidArray equals EMPTY
+bool isEmpty(pid_t * pidArray){
+        int i = 0;
+        for( ; i < MAX_RUNNING; i++)
+                if (pidArray[i] != EMPTY) return false;
+
+	return true;
+}
+
+// Returns the index of a random non EMPTY pid in the array
+int randomPidIndex(pid_t * pidArray){
+	if (isEmpty(pidArray))
+		 perrorExit("Called randomPidIndex on empty pid array");
+
+	int random;
+
+        do {
+                random = rand() % MAX_RUNNING;
+        } while (pidArray[random] == EMPTY);
+	
+ 	return random;
+}

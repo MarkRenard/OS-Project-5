@@ -18,20 +18,26 @@
 #include <sys/errno.h>
 #include <unistd.h>
 
+// Constants
 const Clock DETECTION_INTERVAL = {1, 0};
 const Clock MIN_FORK_TIME = {0, 1 * MILLION};
 const Clock MAX_FORK_TIME = {0, 250 * MILLION};
 const Clock MAIN_LOOP_INCREMENT = {0, 50 * MILLION};
 
+// Prototypes
 static void simulateResourceManagement(ProtectedClock *, ResourceDescriptor *,
 				       Message *);
 static void populateDescriptors(ResourceDescriptor * resources);
 static pid_t launchUserProcess(int simPid);
 static bool processCompleted(pid_t * pidArray);
+static void processMessages(ProtectedClock *, ResourceDescriptor *, Message *);
+static bool deadlockDetected(Clock, const ResourceDescriptor *);
+static bool resolveDeadlock(pid_t *, ResourceDescriptor *);
 static void assignSignalHandlers();
 static void cleanUpAndExit(int param);
 static void cleanUp();
 
+// Static global variables
 static char * shm;	// Pointer to the shared memory region
 
 int main(int argc, char * argv[]){
@@ -57,8 +63,6 @@ int main(int argc, char * argv[]){
 	return 0;
 }
 
-
-
 // Generates processes, grants requests, and resolves deadlock in a loop
 void simulateResourceManagement(ProtectedClock * clock,
 			        ResourceDescriptor * resources,
@@ -76,8 +80,12 @@ void simulateResourceManagement(ProtectedClock * clock,
 	initPClock(clock);			// Initializes protected clock
 	populateDescriptors(resources);		// Sets initial resources
 
+	int i = 0;
+
 	// Launches processes and resolves deadlock until limits reached
 	do {
+
+		fprintf(stderr, "\nIteration %d:\n", i++);
 
 		// Waits for semaphore protecting system clock
 		pthread_mutex_lock(&clock->sem);		
@@ -101,19 +109,18 @@ void simulateResourceManagement(ProtectedClock * clock,
 		
 		// Waits for completed child processes
 		while (processCompleted(pidArray)) running--;
-/*
+
 		// Checks for resource request or release, updates descriptors
 		processMessages(clock, resources, messages);
 
 		// Detects and resolves deadlock at regular intervals
 		if (clockCompare(clock->time, timeToDetect) >= 0){
-			if (deadlockDetected(resources, clock->time)){	
+			if (deadlockDetected(clock->time, resources)){	
 				do {
 					running--;
 				} while(!resolveDeadlock(pidArray, resources));
 			}
 		}
-*/
 
 		incrementClock(&clock->time, MAIN_LOOP_INCREMENT);
 
@@ -158,23 +165,13 @@ static bool processCompleted(pid_t * pidArray){
 	fprintf(stderr, "processCompleted called\n");
 
 	// Returns false if there are no "running processes"
-	int i = 0;
-	bool empty = true;
-	for( ; i < MAX_RUNNING; i++){
-		if (pidArray[i] != -1) empty = false;
-		break;
-	}
-
-	if (empty) return false;
+	if (isEmpty(pidArray)) return false;
 
 	// Returns false with probability 1/2
 	if (rand() % 2) return false;
 	
 	// Removes a pid from the array and returns true
-	do {
-		random = rand() % MAX_RUNNING;
-	} while (pidArray[random] == -1);
-	
+	random = randomPidIndex(pidArray);
 	pidArray[random] = -1;
 
 	fprintf(stderr, "processCompleted - pid %d \"completed\"\n", random);
@@ -194,6 +191,34 @@ static bool processCompleted(pid_t * pidArray){
 */
 }
 
+// Reads message array, responds to requests, and releases resources
+static void processMessages(ProtectedClock * clock, 
+			    ResourceDescriptor * resources, Message * messages){
+	fprintf(stderr, "processMessages called\n");
+
+}
+
+// Returns true if the current state is a deadlock state, logs time
+static bool deadlockDetected(Clock now, const ResourceDescriptor * resources){
+	bool detected = !((bool)(rand() % 5));
+
+	fprintf(stderr, "deadlockDetected called - ");
+
+	if (detected) fprintf(stderr, "DETECTED\n");
+	else fprintf(stderr, "NOT detected\n");
+
+	return detected;
+}
+
+// Selects a single process to terminate and returns true if deadlock resolved
+static bool resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources){
+	if (isEmpty(pidArray)) return true;
+
+	int random = randomPidIndex(pidArray);
+	pidArray[random] = -1;
+
+	return (bool)(rand() % 2);
+}
 
 // Determines the processes response to ctrl + c or alarm
 static void assignSignalHandlers(){

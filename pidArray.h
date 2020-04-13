@@ -14,4 +14,8 @@ int getLogicalPid(const pid_t * pidArray);
 // Assigns EMPTY to the value in pidArray at the index with value pid
 void removePid(pid_t * pidArray, pid_t pid);
 
+bool isEmpty(pid_t * pidArray);
+
+int randomPidIndex(pid_t * pidArray);
+
 #endif
