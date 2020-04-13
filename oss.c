@@ -16,6 +16,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <sys/errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 // Constants
@@ -47,7 +49,7 @@ int main(int argc, char * argv[]){
 
 	exeName = argv[0];	// Assigns exeName for perrorExit
 	assignSignalHandlers(); // Sets response to ctrl + C & alarm
-	alarm(MAX_SECONDS);	// Limits total execution time
+//	alarm(MAX_SECONDS);	// Limits total execution time
 
 	srand(BASE_SEED - 1);   // Seeds pseudorandom number generator
 
@@ -136,11 +138,11 @@ static void populateDescriptors(ResourceDescriptor * resources){
 
 // Forks & execs a user process with the assigned logical pid, returns child pid
 static pid_t launchUserProcess(int simPid){
-	fprintf(stderr, "launchuserProcess(%d)\n", simPid);
+	fprintf(stderr, "launchUserProcess(%d) called - ", simPid);
 
-	return 0;
+//	return 0;
 
-/*	pid_t realPid;
+	pid_t realPid;
 
 	// Forks, exiting on error
 	if ((realPid = fork()) == -1) perrorExit("Failed to fork");
@@ -154,16 +156,18 @@ static pid_t launchUserProcess(int simPid){
 		perrorExit("Failed to execl");
 	}
 
+	fprintf(stderr, "Process %d real pid: %d\n", simPid, realPid);
+
 	return realPid;
-*/
+
 }
 
 // Returns true of a process has completed and removes its pid from the array
 static bool processCompleted(pid_t * pidArray){
-	int random;
+//	int random;
 
-	fprintf(stderr, "processCompleted called\n");
-
+	fprintf(stderr, "processCompleted called - ");
+/*
 	// Returns false if there are no "running processes"
 	if (isEmpty(pidArray)) return false;
 
@@ -177,18 +181,25 @@ static bool processCompleted(pid_t * pidArray){
 	fprintf(stderr, "processCompleted - pid %d \"completed\"\n", random);
 
 	return true;
-/*
+*/
 	pid_t childPid;	// Index of a completed child
 
 	// Waits for a completed child if one exists and gets child pid
 	while((childPid = waitpid(-1, NULL, WNOHANG)) == -1 && errno == EINTR);
 
 	// Returns false if no child has completed
-	if (childPid == -1) return false;
+	if (childPid == -1 || childPid == 0){
+		fprintf(stderr, "no children completed\n");
+		 return false;
+	}
+
+	fprintf(stderr, "removing real pid %d\n", childPid);
 	
 	// Sets value at index corresponding to the finished pid to EMPTY
 	removePid(pidArray, childPid);
-*/
+
+	return true;
+
 }
 
 // Reads message array, responds to requests, and releases resources
@@ -212,10 +223,19 @@ static bool deadlockDetected(Clock now, const ResourceDescriptor * resources){
 
 // Selects a single process to terminate and returns true if deadlock resolved
 static bool resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources){
+	fprintf(stderr, "resolveDeadlock called - ");
+
 	if (isEmpty(pidArray)) return true;
 
 	int random = randomPidIndex(pidArray);
-	pidArray[random] = -1;
+	pid_t randomPid = pidArray[random];
+
+	kill(randomPid, SIGKILL);
+	waitpid(randomPid, NULL, 0);
+
+	fprintf(stderr, "removing process %d with pid %d\n", random, randomPid);
+
+	removePid(pidArray, randomPid);
 
 	return (bool)(rand() % 2);
 }
