@@ -17,7 +17,7 @@ typedef struct protectedClock {
 
 void initPClock(ProtectedClock * pClockPtr);
 void incrementPClock(ProtectedClock * pClockPtr, Clock increment);
-Clock getPClockTime(ProtectedClock * pClockPtr);
+Clock getPTime(ProtectedClock * pClockPtr);
 
 /*
 // Uses two unsigned ints as a clock

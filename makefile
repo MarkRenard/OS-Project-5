@@ -20,7 +20,7 @@ DEBUG	   = #-DDEBUG_Q
 
 .SUFFIXES: .c .o
 
-all: $(OSS)
+all: $(OUTPUT)
 
 $(OSS): $(OSS_OBJ) $(OSS_H)
 	$(CC) $(FLAGS) -o $@ $(OSS_OBJ) 
