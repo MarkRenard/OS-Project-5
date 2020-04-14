@@ -18,4 +18,6 @@ bool isEmpty(pid_t * pidArray);
 
 int randomPidIndex(pid_t * pidArray);
 
+void printPids(pid_t *);
+
 #endif

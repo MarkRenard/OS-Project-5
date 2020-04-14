@@ -4,6 +4,7 @@
 
 #include "clock.h"
 #include "getSharedMemoryPointers.h"
+#include "logging.h"
 #include "message.h"
 #include "perrorExit.h"
 #include "pidArray.h"
@@ -50,6 +51,7 @@ int main(int argc, char * argv[]){
 	exeName = argv[0];	// Assigns exeName for perrorExit
 	assignSignalHandlers(); // Sets response to ctrl + C & alarm
 //	alarm(MAX_SECONDS);	// Limits total execution time
+	openLogFile();		// Opens file written to in logging.c
 
 	srand(BASE_SEED - 1);   // Seeds pseudorandom number generator
 
@@ -88,6 +90,7 @@ void simulateResourceManagement(ProtectedClock * clock,
 	do {
 
 		fprintf(stderr, "\nIteration %d:\n", i++);
+		printPids(pidArray);
 
 		// Waits for semaphore protecting system clock
 		pthread_mutex_lock(&clock->sem);		

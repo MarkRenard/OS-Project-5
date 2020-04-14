@@ -4,7 +4,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-// #include <unistd.h>
+#include <stdio.h>
 
 #include "constants.h"
 #include "perrorExit.h"
@@ -79,4 +79,13 @@ int randomPidIndex(pid_t * pidArray){
         } while (pidArray[random] == EMPTY);
 	
  	return random;
+}
+
+// Prints all the pids in the array
+void printPids(pid_t * pidArray){
+	int i = 0;
+	for ( ; i < MAX_RUNNING; i++){
+		fprintf(stderr, "%d ", pidArray[i]);
+	}
+	fprintf(stderr, "\n");
 }

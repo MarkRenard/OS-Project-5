@@ -28,15 +28,15 @@ int main(int argc, char * argv[]){
 
 	getSharedMemoryPointers(&shm, &systemClock, &resources, &messages, 0);
 
-	srand(BASE_SEED + simPid + getPTime(systemClock).nanoseconds);
+	srand(BASE_SEED + simPid); // getPTime(systemClock).nanoseconds);
 
-	fprintf(stderr, "Process P%d running!\n", simPid);
+	fprintf(stderr, "\n\tPROCESS P%d RUNNING!\n\n", simPid);
 
 	nanosleep(&SLEEP, NULL);
 	
-	fprintf(stderr, "Process P%d completing!\n", simPid);
-
 	detach(shm);
+	
+	fprintf(stderr, "\n\tPROCESS P%d COMPLETING!\n\n", simPid);
 
 	return 0;
 }
