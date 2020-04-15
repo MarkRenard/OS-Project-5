@@ -47,4 +47,10 @@ void logRelease(int * resources, int size);
 // Prints table of m resources, n processes
 int printTable(FILE * fp, int * table, int m, int n);
 
+// Prints a matrix representation of the state of the program to a file
+void printMatrixRep(FILE * fp, ResourceDescriptor * resources);
+
+// Prints allocated, requested, and available matrices to a file
+void printMatrices(FILE* fp, int* allocated, int* requested, int* available); 
+
 #endif

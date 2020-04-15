@@ -19,6 +19,11 @@ void initPidArray(pid_t * pidArray){
 
 // Returns the next logical pid corresponding to the index of an EMPTY value
 int getLogicalPid(const pid_t * pidArray){
+	int i = 0;
+	for( ; i < MAX_RUNNING; i++)
+		if (pidArray[i] == EMPTY) return i;
+
+	/*
 	static int lastChosen = -1;
 
 	int i = lastChosen + 1;
@@ -33,7 +38,7 @@ int getLogicalPid(const pid_t * pidArray){
 			return i;
 		}
 	}
-
+*/
 	perrorExit("getLogicalPid called with no free pids");
 
 	return 0;

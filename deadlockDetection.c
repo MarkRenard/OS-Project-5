@@ -12,6 +12,7 @@
 #include "clock.h"
 #include "constants.h"
 #include "logging.h"
+#include "matrixRepresentation.h"
 #include "message.h"
 #include "oss.h"
 #include "perrorExit.h"
@@ -81,7 +82,7 @@ static void initVector(int * vector, int size, int n){
 		vector[i] = n;
 	}
 }
-
+/*
 // Sets the allocation matrix
 static void setAllocated(ResourceDescriptor * resources, 
 			  int * allocated){
@@ -96,7 +97,7 @@ static void setAllocated(ResourceDescriptor * resources,
 }
 
 // Sets the request matrix
-static void setRequest(ResourceDescriptor * resources,
+static void setRequest(const ResourceDescriptor * resources,
 			int * request){
 	int i, r, p;
 	int m = NUM_RESOURCES;
@@ -109,31 +110,17 @@ static void setRequest(ResourceDescriptor * resources,
 		request[i] = 0;
 	}
 
-	// Adds requests in waiting queue of each resource descriptor
+	// Sums requests in waiting queue of each resource descriptor
 	for (r = 0; r < NUM_RESOURCES; r++){
 		msg = resources[r].waiting.front;
 
 		while (msg != NULL){
 			p = msg->simPid;
 			request[p*m + r] += msg->quantity;
-		}
-	}
-
-/*
-
-	// Records quantity requested of each resource
-	for (r = 0; r < NUM_RESOURCES; r++){
-		msg = resources[r].waiting.front;	
-
-		// Traverses the request queue for each resource
-		while(msg != NULL){
-			int p = msg->simPid;
-			request[p*m + r] = msg->quantity;
-			
 			msg = msg->previous;
 		}
 	}
-*/
+
 }
 
 // Sets the available vector
@@ -144,6 +131,7 @@ static void setAvailable(ResourceDescriptor * resources,
 		available[r] = resources[r].numAvailable;	
 	}
 }
+*/
 
 // Kills the process with the greatest request and removes it from the pidArray
 static void killAProcess(pid_t * pidArray, int * deadlocked, 
@@ -203,6 +191,8 @@ static void updateMatrices(ResourceDescriptor * resources, int * allocated,
 int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 		    Message * messages){
 
+	fprintf(stderr, "RESOLVING DEADLOCK!\n");
+
 	int allocated[NUM_RESOURCES * MAX_RUNNING];	// Resource allocation
 	int request[NUM_RESOURCES * MAX_RUNNING];	// Current requests
 	int available[NUM_RESOURCES];			// Available resources
@@ -216,7 +206,7 @@ int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 	setRequest(resources, request);
 	setAvailable(resources, available);
 	initVector(deadlocked, MAX_RUNNING, 0);
-
+/*
 	fprintf(stderr, "Allocation matrix:\n");
 	printTable(stderr, allocated, NUM_RESOURCES, MAX_RUNNING);
 
@@ -225,6 +215,8 @@ int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 
 	fprintf(stderr, "Available vector:");
 	printTable(stderr, available, NUM_RESOURCES, 1);
+*/
+	printMatrices(stderr, allocated, request, available);
 
 	// If deadlock exists, repeatedly kills processes until resolved
 	while(deadlock(available, NUM_RESOURCES, MAX_RUNNING, request,
@@ -239,7 +231,20 @@ int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 		setRequest(resources, request);
 		setAvailable(resources, available);
 		initVector(deadlocked, MAX_RUNNING, 0);
+
+		
+		fprintf(stderr, "Allocation matrix:\n");
+		printTable(stderr, allocated, NUM_RESOURCES, MAX_RUNNING);
+	
+		fprintf(stderr, "Request matrix:\n");
+		printTable(stderr, request, NUM_RESOURCES, MAX_RUNNING);
+	
+		fprintf(stderr, "Available vector:");
+		printTable(stderr, available, NUM_RESOURCES, 1);
+	
 	}
+
+	fprintf(stderr, "End of deadlock resolution. Killed: %d\n", killed);
 
 	return killed;
 }

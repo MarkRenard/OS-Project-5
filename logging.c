@@ -6,6 +6,7 @@
 #include "clock.h"
 #include "constants.h"
 #include "perrorExit.h"
+#include "matrixRepresentation.h"
 #include "resourceDescriptor.h"
 #include <stdio.h>
 
@@ -221,3 +222,33 @@ int printTable(FILE * fp, int * table, int m, int n){
 	return lines;
 }
 
+
+// Prints allocated, requested, and available matrices to a file
+void printMatrices(FILE * fp, int * allocated, int * request, 
+	int * available){
+	
+        fprintf(fp, "Allocation matrix:\n");
+        printTable(fp, allocated, NUM_RESOURCES, MAX_RUNNING);
+
+        fprintf(fp, "Request matrix:\n");
+        printTable(fp, request, NUM_RESOURCES, MAX_RUNNING);
+
+        fprintf(fp, "Available vector:");
+        printTable(fp, available, NUM_RESOURCES, 1);
+}
+
+// Prints a matrix representation of the state of the program to a file
+void printMatrixRep(FILE * fp, ResourceDescriptor * resources){
+        int allocated[NUM_RESOURCES * MAX_RUNNING];     // Resource allocation
+        int request[NUM_RESOURCES * MAX_RUNNING];       // Current requests
+        int available[NUM_RESOURCES];                   // Available resources
+
+
+        // Initializes vectors
+        setAllocated(resources, allocated);
+        setRequest(resources, request);
+        setAvailable(resources, available);
+
+	// Prints matrices
+	printMatrices(fp, allocated, request, available);
+}

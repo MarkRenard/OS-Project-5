@@ -111,7 +111,7 @@ int main(int argc, char * argv[]){
 				simPid, reply);
 
 			if (strcmp(reply, "kill") == 0){
-				fprintf(stderr, "\tPROCESS KILLED!!!");
+				fprintf(stderr, "\tPROCESS KILLED!!!\n");
 				terminating = true;
 				//killed = true;
 			}

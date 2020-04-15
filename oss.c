@@ -7,6 +7,7 @@
 #include "getSharedMemoryPointers.h"
 #include "logging.h"
 #include "message.h"
+#include "matrixRepresentation.h"
 #include "perrorExit.h"
 #include "pidArray.h"
 #include "protectedClock.h"
@@ -139,7 +140,7 @@ void simulateResourceManagement(){
 				running--;
 			}
 		}
-/*
+
 		// Detects and resolves deadlock at regular intervals
 		if (clockCompare(systemClock->time, timeToDetect) >= 0){
 			logDeadlockDetection(systemClock->time);
@@ -150,7 +151,7 @@ void simulateResourceManagement(){
 			incrementClock(&timeToDetect, DETECTION_INTERVAL);
 		}
 
-*/
+
 		incrementClock(&systemClock->time, MAIN_LOOP_INCREMENT);
 		printTimeln(stderr, systemClock->time);
 
@@ -263,16 +264,19 @@ void processTerm(int simPid, bool killed){
 
 	logRelease(released, NUM_RESOURCES);
 
-	// Processes old requests for released resources
-	for (r = 0; r < NUM_RESOURCES; r++){
-		if (released[r] > 0) processQueuedRequests(r);
-	}
-
 	// Resets message
 	initMessage(&messages[simPid], simPid);
 
-	// Replies with acknowlegement if the process was not killed
+	// Additional processing when process completed by itself
 	if (!killed){
+
+		// Processes old requests for released resources
+		for (r = 0; r < NUM_RESOURCES; r++){
+			if (released[r] > 0) processQueuedRequests(r);
+		}
+
+
+		// Replies with acknowlegement if the process was not killed
 		sendMessage(replyMqId, "termination confirmed", simPid + 1);
 	}
 }
@@ -283,7 +287,7 @@ static void processRequest(int simPid){
 
 	// Grants request if it is less than available
 	if (msg->quantity <= resources[msg->rNum].numAvailable){
-		grantRequest(msg);
+	grantRequest(msg);
 
 	// Enqueues message otherwise
 	} else {
