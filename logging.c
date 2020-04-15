@@ -107,21 +107,37 @@ void logKill(int simPid){
 void logCompletion(int simPid){
 	if (++lines > MAX_LOG_LINES) return;
 
-	fprintf(log, "Master has responded to P%d completing\n", simPid);
+	fprintf(log, "\tMaster has responded to P%d completing\n", simPid);
 }
 
 // Prints the resource class ids and quantity of released resources
 void logRelease(int * resources, int size){
+	int released[NUM_RESOURCES];	// Number of each resource reached
+	int indices[NUM_RESOURCES];	// Index of each resource
+
+	// Copies non-zero allocations & indices to released, returns if zero
+	int i, j = 0;
+	for (i = 0; i < NUM_RESOURCES; i++){
+		if (resources[i] != 0){
+			released[j] = resources[i];
+			indices[j] = i;
+			j++;
+		}
+	}
+
+	// Returns if no resources released
+	if (j == 0) return;
+
+	// Returns if max log lines reached	
 	if (++lines > MAX_LOG_LINES) return;
 
 	// Prints message, first resource released and quantity
 	fprintf(log, "\t\tResources released are as follows: R%d:%d",
-		resources[0], 0);
+		indices[0], released[0]);
 
 	// Prints subsequent resources released and quantity
-	int i = 1;
-	for ( ; i < size; i++){
-		fprintf(log, ", R%d:%d", i, resources[i]);
+	for (i = 1; i < j; i++){
+		fprintf(log, ", R%d:%d", indices[i], released[i]);
 	}
 	fprintf(log, "\n");
 }

@@ -33,7 +33,9 @@
 #define SHAREABLE_PROBABILITY 0.2	// Chance resource will be shareable
 
 #define MIN_FORK_TIME_SEC 0U		// Value of seconds in MIN_FORK_TIME
-#define MAX_FORK_TIME_NS 500000000U	// Value of nanoseconds in MAX_FORK_TIME
+#define MIN_FORK_TIME_NS (1 * MILLION)	// Value of nanoseconds in MIN_FORK_TIME
+#define MAX_FORK_TIME_SEC 0U		// Value of seconds in MAX_FORK_TIME
+#define MAX_FORK_TIME_NS (500 * MILLION)// Value of nanoseconds in MAX_FORK_TIME
 
 #define USER_PROG_PATH "./userProgram"	// The path to the user program
 
@@ -46,11 +48,11 @@
 
 
 // Used by userProgram.c
-#define TERMINATION_PROBABILITY 0.1	// Chance of terminating
-#define REQUEST_PROBABILITY 0.7		// Chance of request instead of release
+#define TERMINATION_PROBABILITY 0.3	// Chance of terminating
+#define REQUEST_PROBABILITY 0.9		// Chance of request instead of release
 
-#define MIN_RES 1			// Min quantity to request or release
-#define MAX_RES 10			// Max quantity to request or release
+#define MIN_RES MIN_INST		// Min quantity to request or release
+#define MAX_RES MAX_INST		// Max quantity to request or release
 
 #define MIN_WAIT_SEC 0			// Min seconds waiting if blocked
 #define MIN_WAIT_MS 0			// Min milliseconds waiting if blocked

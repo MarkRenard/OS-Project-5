@@ -104,9 +104,9 @@ int main(int argc, char * argv[]){
 		// Waits for response to request
 		if (msgSent){
 			fprintf(stderr, "\n\tP%d WAITING FOR MSG\n\n", simPid);
-			waitForMessage(replyMqId, reply, simPid);
-			fprintf(stderr, "\n\tP%d ULTIMATE ANSWER RECEIVED\n\n",
-				simPid);
+			waitForMessage(replyMqId, reply, simPid + 1);
+			fprintf(stderr, "\n\tP%d RECEIVED %s\n\n",
+				simPid, reply);
 			msgSent = false;
 		}
 	}

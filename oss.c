@@ -261,7 +261,7 @@ static void processTerm(int simPid){
 	initMessage(&messages[simPid], simPid);
 
 	// Replies with acknowlegement
-	sendMessage(replyMqId, "42", simPid + 1);
+	sendMessage(replyMqId, "termination confirmed", simPid + 1);
 }
 
 // Responds to a request for resources by granting it or enqueueing the request
@@ -285,7 +285,7 @@ static void processRequest(int simPid){
 		msg->type = VOID;
 
 		// Replies with acknowlegement
-		sendMessage(replyMqId, "42", simPid + 1);
+		sendMessage(replyMqId, "request confirmed", simPid + 1);
 
 	// Enqueues message otherwise
 	} else {
@@ -311,7 +311,7 @@ static void processRelease(int simPid){
 	msg->type = VOID;
 
 	// Replies with acknowlegement
-	sendMessage(replyMqId, "42", simPid + 1);
+	sendMessage(replyMqId, "release confirmed", simPid + 1);
 }
 
 // Determines the processes response to ctrl + c or alarm
