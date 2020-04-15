@@ -21,6 +21,7 @@ void openLogFile(){
 void logRequestDetection(int simPid, int resourceId, int count, Clock time){
 	if (++lines > MAX_LOG_LINES) return;
 
+
 	fprintf(log, "Master has detected Process P%d requesting %d of R%d at" \
 		" time %03d : %09d\n", simPid, count, resourceId, 
 		time.seconds, time.nanoseconds);
@@ -31,7 +32,7 @@ void logRequestDetection(int simPid, int resourceId, int count, Clock time){
 void logAllocation(int simPid, int resourceId, int count, Clock time){
 	if (++lines > MAX_LOG_LINES) return;
 
-	fprintf(log, "Master granted P%d reqest for %d of R%d at time " \
+	fprintf(log, "Master granted P%d request for %d of R%d at time " \
 		" %03d : %09d\n", simPid, count, resourceId, time.seconds, 
 		time.nanoseconds);
 

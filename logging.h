@@ -13,7 +13,7 @@ void openLogFile();
 void logRequestDetection(int simPid, int resourceId, int count, Clock time);
 
 // Logs allocation of a resource
-void logResourceAllocation(int simPid, int resourceId, int count, Clock time);
+void logAllocation(int simPid, int resourceId, int count, Clock time);
 
 // Logs the ids and quantities of resources being released at a particular time
 void logResourceRelease(int simPid, int resourceId, int count, Clock time);

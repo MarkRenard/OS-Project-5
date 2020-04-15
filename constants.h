@@ -47,7 +47,7 @@
 
 // Used by userProgram.c
 #define TERMINATION_PROBABILITY 0.1	// Chance of terminating
-#define REQUEST_PROBABILITY 0.5		// Chance of request instead of release
+#define REQUEST_PROBABILITY 0.7		// Chance of request instead of release
 
 #define MIN_RES 1			// Min quantity to request or release
 #define MAX_RES 10			// Max quantity to request or release

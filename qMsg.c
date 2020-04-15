@@ -29,12 +29,9 @@ void sendMessage(int msgQueueId, const char * msgText, long int type){
 	msg.type = type;
 	strcpy(msg.str, msgText);
 
-	fprintf(stderr, "sendMessage - msg.str: %s\n", msg.str);
-	fprintf(stderr, "sendMessage - msg.type: %d\n", msg.type);
-	
 	// Sends message
 	if ((msgsnd(msgQueueId, (const void *)&msg, sizeof(msg.str), 0)) == -1){
-		fprintf(stderr, "Couldn't send msg of type %i\n", type);
+		fprintf(stderr, "Couldn't send msg of type %ld\n", type);
 		fprintf(stderr, "Msg: %s\n", msg.str);
 		perrorExit("Couldn't send message");
 	}
@@ -61,11 +58,12 @@ int getMessage(int msgQueueId, char * msgText, long int * type ){
 		== -1){
 		if (errno == ENOMSG) return 0;
 		else perrorExit("Error getting message");
-	} else {
-		strcpy(msgText, msg.str);
-		*type = msg.type;
-		return 1;
 	}
+
+	strcpy(msgText, msg.str);
+	*type = msg.type;
+	return 1;
+
 }
 
 // Removes the message queue with the specified id

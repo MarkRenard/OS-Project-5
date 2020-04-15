@@ -170,7 +170,6 @@ static bool requestResources(ResourceDescriptor * resources,
 static bool releaseResources(ResourceDescriptor * resources,
 			     Message * messages, int simPid){
 
-	fprintf(stderr, "\n\tPROCESS %d, releaseResources", simPid);
 	char msgBuff[BUFF_SZ];	// Message buffer
 	int rNum;		// Resource index
 	int quantity;		// Actual quantity requested
