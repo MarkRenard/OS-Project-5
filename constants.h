@@ -25,6 +25,7 @@
 #define MSG_SZ 30			// Size of Message char arrays
 
 #define MAX_LOG_LINES 100000		// Max number of lines in the log file
+#define ALLOC_PER_TABLE 2		// Number of granted requests per table
 
 // Used by oss.c
 #define MAX_RUNNING 5	 		// Max number of running child processes

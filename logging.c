@@ -6,6 +6,7 @@
 #include "clock.h"
 #include "constants.h"
 #include "perrorExit.h"
+#include "resourceDescriptor.h"
 #include <stdio.h>
 
 static FILE * log = NULL;
@@ -36,6 +37,43 @@ void logAllocation(int simPid, int resourceId, int count, Clock time){
 		" %03d : %09d\n", simPid, count, resourceId, time.seconds, 
 		time.nanoseconds);
 
+}
+
+// Prints the resource allocation table every 20 requests by default
+void logTable(ResourceDescriptor * resources){
+	if (++lines > MAX_LOG_LINES) return;
+	static int callCount = 0;	// Times called since last print
+
+	// Restricts printing to once every 20 request by default
+	callCount++;
+	if (callCount < ALLOC_PER_TABLE) return;
+	callCount = 0;
+
+	// Prints the table	
+	int m, n;	// m resources, n processes
+	
+	// Prints header
+	fprintf(log, "\n     ");
+	for (m = 0; m < NUM_RESOURCES; m++){
+		fprintf(log, "R%02d ", m);
+	}
+	fprintf(log, "\n");
+	lines++;
+
+	// Prints rows
+	for (n = 0; n < MAX_RUNNING; n++){
+		fprintf(log, "P%02d: ", n);
+
+		// Prints each resource
+		for (m = 0; m < NUM_RESOURCES; m++)
+			fprintf(log, "%02d  ", resources[m].allocations[n]);
+
+		fprintf(log, "\n");
+		lines++;
+	}
+
+	fprintf(log, "\n");
+	lines++;
 }
 
 // Logs the id and quantity of resources being released at a particular time

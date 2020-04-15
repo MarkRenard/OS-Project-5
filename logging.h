@@ -15,6 +15,9 @@ void logRequestDetection(int simPid, int resourceId, int count, Clock time);
 // Logs allocation of a resource
 void logAllocation(int simPid, int resourceId, int count, Clock time);
 
+// Prints the resource allocation table every 20 requests by default
+void logTable(ResourceDescriptor * resources);
+
 // Logs the ids and quantities of resources being released at a particular time
 void logResourceRelease(int simPid, int resourceId, int count, Clock time);
 
