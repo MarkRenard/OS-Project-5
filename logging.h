@@ -6,6 +6,8 @@
 #ifndef LOGGING_H
 #define LOGGING_H
 
+#include "resourceDescriptor.h"
+
 // Opens the log file with name LOG_FILE_NAME or exits with an error message
 void openLogFile();
 
@@ -41,5 +43,8 @@ void logKill(int simPid);
 
 // Prints the resource class ids and count of released resources
 void logRelease(int * resources, int size);
+
+// Prints table of m resources, n processes
+int printTable(FILE * fp, int * table, int m, int n);
 
 #endif

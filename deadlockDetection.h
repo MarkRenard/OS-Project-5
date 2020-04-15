@@ -6,6 +6,12 @@
 #ifndef DEADLOCKDETECTION_H
 #define DEADLOCKDETECTION_H
 
+#include "resourceDescriptor.h"
+#include "message.h"
+
+#include <sys/types.h>
+
+
 int resolveDeadlock(pid_t * pidArray, volatile ResourceDescriptor * resources,
                     volatile Message * messages);
 

@@ -1,6 +1,6 @@
 OSS	= oss
 OSS_OBJ	= $(COMMON_O) oss.o pidArray.o logging.o queue.o deadlockDetection.o
-OSS_H	= $(COMMON_H) pidArray.h logging.h queue.h deadlockDetection.h
+OSS_H	= $(COMMON_H) oss.h pidArray.h logging.h queue.h deadlockDetection.h
 
 USER_PROG	= userProgram
 USER_PROG_OBJ	= $(COMMON_O) userProgram.o 

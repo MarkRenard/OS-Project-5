@@ -3,6 +3,7 @@
 // This program simulates deadlock detection and resolution.
 
 #include "clock.h"
+#include "deadlockDetection.h"
 #include "getSharedMemoryPointers.h"
 #include "logging.h"
 #include "message.h"
@@ -27,10 +28,11 @@
 // Prototypes
 static void simulateResourceManagement();
 static pid_t launchUserProcess(int simPid);
-static void processTerm(int);
+void processTerm(int, bool killed);
 static void processRequest(int);
 static void processRelease(int);
 static void processQueuedRequests(int rNum);
+static void processAllQueuedRequests();
 static void grantRequest(Message * msg);
 static int parseMessage();
 static void assignSignalHandlers();
@@ -51,7 +53,7 @@ static ResourceDescriptor * resources;		// Shared memory resource table
 static Message * messages;			// Shared memory message vector
 
 static int requestMqId;	// Id of message queue for resource requests & release
-static int replyMqId;	// Id of message queue for replies from oss
+int replyMqId;		// Id of message queue for replies from oss
 
 int main(int argc, char * argv[]){
 
@@ -86,7 +88,7 @@ int main(int argc, char * argv[]){
 void simulateResourceManagement(){
 
 	Clock timeToFork = zeroClock();		 // Time to launch user process 
-//	Clock timeToDetect = DETECTION_INTERVAL; // Time to resolve deadlock
+	Clock timeToDetect = DETECTION_INTERVAL; // Time to resolve deadlock
 
 	pid_t pidArray[MAX_RUNNING];		// Array of user process pids
 	initPidArray(pidArray);			// Sets pids to -1
@@ -130,24 +132,25 @@ void simulateResourceManagement(){
 			} else if (messages[m].type == RELEASE) {
 				processRelease(m);
 			} else if (messages[m].type == TERMINATION){
-				processTerm(m);
+				processTerm(m, false);
 			
 				// Removes from running processes
 				pidArray[m] = EMPTY;
 				running--;
 			}
 		}
-
 /*
 		// Detects and resolves deadlock at regular intervals
-		if (clockCompare(clock->time, timeToDetect) >= 0){
-			logDeadlockDetection(clock->time);
+		if (clockCompare(systemClock->time, timeToDetect) >= 0){
+			logDeadlockDetection(systemClock->time);
 
 			running -= resolveDeadlock(pidArray, resources, 
 						   messages);
-		}
-*/
 
+			incrementClock(&timeToDetect, DETECTION_INTERVAL);
+		}
+
+*/
 		incrementClock(&systemClock->time, MAIN_LOOP_INCREMENT);
 		printTimeln(stderr, systemClock->time);
 
@@ -243,8 +246,8 @@ static int parseMessage(){
 // Gets message
 // static void parseMessages(Message * messages);
 
-// Responds to a termination message by releasing associated resources
-static void processTerm(int simPid){
+// Responds to a termination event by releasing associated resources
+void processTerm(int simPid, bool killed){
 
 	fprintf(stderr, "Responding to termination of process %d\n", simPid);
 
@@ -268,8 +271,10 @@ static void processTerm(int simPid){
 	// Resets message
 	initMessage(&messages[simPid], simPid);
 
-	// Replies with acknowlegement
-	sendMessage(replyMqId, "termination confirmed", simPid + 1);
+	// Replies with acknowlegement if the process was not killed
+	if (!killed){
+		sendMessage(replyMqId, "termination confirmed", simPid + 1);
+	}
 }
 
 // Responds to a request for resources by granting it or enqueueing the request
@@ -305,11 +310,20 @@ static void processQueuedRequests(int rNum){
 
 		// Grants request if possible
 		if (msg->quantity <= resources[rNum].numAvailable){
+
+			fprintf(stderr, "Granting old request from P%d for " \
+				"%d of R%d\n", msg->simPid, msg->quantity,
+				 msg->rNum);
+
 			grantRequest(msg);
 			dequeue(q);
 
 		// Re-enqueues if not
 		} else {
+			fprintf(stderr, "Can't grant queued request from P%d for " \
+				"%d of R%d - only %d available\n", msg->simPid, 
+				msg->quantity, msg->rNum, 
+				resources[rNum].numAvailable);
 			dequeue(q);
 			enqueue(q, msg);
 		}
@@ -340,6 +354,14 @@ static void grantRequest(Message * msg){
 	sendMessage(replyMqId, "request confirmed", msg->simPid + 1);
 }
 
+// Calls processQueuedRequest on all resource numbers
+static void processAllQueuedRequests(){
+	int i = 0;
+	for ( ; i < NUM_RESOURCES; i++){
+		processQueuedRequests(i);
+	}
+}
+
 // Releases resources from a process
 static void processRelease(int simPid){
 	Message * msg = &messages[simPid];
@@ -352,6 +374,8 @@ static void processRelease(int simPid){
 
 	msg->quantity = 0;
 	msg->type = VOID;
+
+	processAllQueuedRequests();
 
 	// Replies with acknowlegement
 	sendMessage(replyMqId, "release confirmed", simPid + 1);

@@ -189,4 +189,35 @@ void logRelease(int * resources, int size){
 	fprintf(log, "\n");
 }
 
+// Prints table of m resources, n processes
+int printTable(FILE * fp, int * table, int m, int n){
+	// Prints the table	
+	int r, p;	// resource and process indices
+	int lines = 0;	// Number of lines added
+	
+	// Prints header of resources
+	fprintf(fp, "\n     ");
+	for (r = 0; r < m; r++){
+		fprintf(fp, "R%02d ", r);
+	}
+	fprintf(fp, "\n");
+	lines++;
+
+	// Prints rows of table
+	for (p = 0; p < n; p++){
+		fprintf(fp, "P%02d: ", p);
+
+		// Prints each resource
+		for (r = 0; r < m; r++)
+			fprintf(fp, "%02d  ", table[p*m + r]);
+
+		fprintf(fp, "\n");
+		lines++;
+	}
+
+	fprintf(fp, "\n");
+	lines++;
+
+	return lines;
+}
 

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -72,6 +73,7 @@ int main(int argc, char * argv[]){
 
 	// Repeatedly requests or releases resources or terminates
 	bool terminating = false;
+//	bool killed = false;
 	bool msgSent = false;	
 	while (!terminating) {
 
@@ -79,16 +81,16 @@ int main(int argc, char * argv[]){
 		now = getPTime(systemClock);
 		if (clockCompare(now, decisionTime) >= 0){
 
-			fprintf(stderr, "\n\tP%d - MAKING DECISION AT " \
+	/*		fprintf(stderr, "\n\tP%d - MAKING DECISION AT " \
 				"%03d : %09d\n\n", simPid, now.seconds, 
 				now.nanoseconds);
-
+	*/
 			// Updates decision time
 			incrementClock(&decisionTime, 
 					randomTime(MIN_INC, MAX_INC));
 
 			// Decides whether to terminate
-			if (randBinary(TERMINATION_PROBABILITY)){
+			if (randBinary(TERMINATION_PROBABILITY)){// || killed){
 				signalTermination(simPid);
 				terminating = true;
 				msgSent = true;
@@ -107,13 +109,19 @@ int main(int argc, char * argv[]){
 			waitForMessage(replyMqId, reply, simPid + 1);
 			fprintf(stderr, "\n\tP%d RECEIVED %s\n\n",
 				simPid, reply);
+
+			if (strcmp(reply, "kill") == 0){
+				fprintf(stderr, "\tPROCESS KILLED!!!");
+				terminating = true;
+				//killed = true;
+			}
 			msgSent = false;
 		}
 	}
 
 	// Prepares to exit
 	detach(shm);
-	fprintf(stderr, "\n\tPROCESS P%d COMPLETING!\n\n", simPid);
+	fprintf(stderr, "\n\tPROCESS P%d TERMINATING!\n\n", simPid);
 
 	return 0;
 }
@@ -130,7 +138,7 @@ static void signalTermination(int simPid){
 static bool requestResources(ResourceDescriptor * resources, 
 			     Message * messages, int simPid){
 
-	fprintf(stderr, "\n\tPROCESS %d - requestResources\n\n", simPid);
+//	fprintf(stderr, "\n\tPROCESS %d - requestResources\n\n", simPid);
 
 	char msgBuff[BUFF_SZ];	// Message buffer
 	int rNum;		// Resource index

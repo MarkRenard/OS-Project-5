@@ -9,10 +9,14 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+#include "clock.h"
 #include "constants.h"
+#include "logging.h"
 #include "message.h"
+#include "oss.h"
 #include "perrorExit.h"
 #include "pidArray.h"
+#include "qMsg.h"
 #include "resourceDescriptor.h"
 
 static bool req_lt_avail ( const int*req, const int*avail, const int pnum, \
@@ -26,9 +30,7 @@ static bool req_lt_avail ( const int*req, const int*avail, const int pnum, \
     return ( i == num_res );
 }
 
-
-
-bool deadlock ( const int*available, const int m, const int n, \
+static bool deadlock ( const int*available, const int m, const int n, \
                 const int*request, const int*allocated , int * deadlocked) 
 {
     int  work[m];       // m resources
@@ -96,17 +98,28 @@ static void setAllocated(ResourceDescriptor * resources,
 // Sets the request matrix
 static void setRequest(ResourceDescriptor * resources,
 			int * request){
+	int i, r, p;
 	int m = NUM_RESOURCES;
 	int n = MAX_RUNNING;
 
 	Message * msg;
 
-	int i, r;
-
 	// Initializes values to 0
 	for (i = 0; i < m * n; i++){
 		request[i] = 0;
 	}
+
+	// Adds requests in waiting queue of each resource descriptor
+	for (r = 0; r < NUM_RESOURCES; r++){
+		msg = resources[r].waiting.front;
+
+		while (msg != NULL){
+			p = msg->simPid;
+			request[p*m + r] += msg->quantity;
+		}
+	}
+
+/*
 
 	// Records quantity requested of each resource
 	for (r = 0; r < NUM_RESOURCES; r++){
@@ -120,6 +133,7 @@ static void setRequest(ResourceDescriptor * resources,
 			msg = msg->previous;
 		}
 	}
+*/
 }
 
 // Sets the available vector
@@ -132,11 +146,10 @@ static void setAvailable(ResourceDescriptor * resources,
 }
 
 // Kills the process with the greatest request and removes it from the pidArray
-static void killAProcess(pid_t * pidArray, int * deadlocked, int * request,
+static void killAProcess(pid_t * pidArray, int * deadlocked, 
+			 Message * messages,
 			 ResourceDescriptor * resources){
-	int p, r;		// Process and resource index variables
-	pid_t retval;		// The return value of waitpid
-
+	int p;			// Process index variable
 	int maxRequest = 0;	// Greatest quantity of a resource requested
 	int greediest = -1;	// Index of the process with greatest request
 
@@ -144,33 +157,51 @@ static void killAProcess(pid_t * pidArray, int * deadlocked, int * request,
 	for (p = 0; p < MAX_RUNNING; p++){
 
 		// Selects deadlocked processes
-		if (deadlocked[p]){
-
+		if (deadlocked[p] && messages[p].quantity > maxRequest){
+			maxRequest = messages[p].quantity;
+			greediest = p;
+/*
 			// Finds whether each deadlocked process is greediest
 			for (r = 0; r < NUM_RESOURCES; r++){
 			       if (resources[r].allocations[p] > maxRequest)
 				       maxRequest = resources[r].allocations[p];
 				       greediest = p;
 			}
-		}
+*/		}
 	}
 
 	// Kills the process
-	pid_t greedyPid = pidArray[greediest];
-	kill(greedyPid, SIGQUIT);
+	sendMessage(replyMqId, "kill", greediest + 1);
+	processTerm(greediest, true);
+	//waitpid(pidArray[greediest], NULL, 0);
+
+/*	pid_t greedyPid = pidArray[greediest];
+	//kill(greedyPid, SIGQUIT);
 	pidArray[greediest] = EMPTY;
-	
+*/	
+	// Removes the pid from the array
+	if (pidArray[greediest] == EMPTY) perrorExit("killAProcess - no pid");
+	pidArray[greediest] = EMPTY;
+
 	// Waits for the process
-	while((retval = waitpid(greedyPid, NULL, 0)) == -1 && errno == EINTR);
+/*
+	pid_t retval;
+	while(((retval = waitpid(pidArray[greediest], NULL, 0)) == -1)
+		 && errno == EINTR);
+
 	if (errno == ECHILD) 
 		perrorExit("killAProcess - waited for non-existent child");
-
+*/
 	
 }
+/*
+static void updateMatrices(ResourceDescriptor * resources, int * allocated,
+			   int * request, int * available)
+*/
 
 // Detects and resolves deadlock - returns num killed and removes pids
 int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
-		    volatile Message * messages){
+		    Message * messages){
 
 	int allocated[NUM_RESOURCES * MAX_RUNNING];	// Resource allocation
 	int request[NUM_RESOURCES * MAX_RUNNING];	// Current requests
@@ -186,11 +217,28 @@ int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 	setAvailable(resources, available);
 	initVector(deadlocked, MAX_RUNNING, 0);
 
+	fprintf(stderr, "Allocation matrix:\n");
+	printTable(stderr, allocated, NUM_RESOURCES, MAX_RUNNING);
+
+	fprintf(stderr, "Request matrix:\n");
+	printTable(stderr, request, NUM_RESOURCES, MAX_RUNNING);
+
+	fprintf(stderr, "Available vector:");
+	printTable(stderr, available, NUM_RESOURCES, 1);
+
 	// If deadlock exists, repeatedly kills processes until resolved
 	while(deadlock(available, NUM_RESOURCES, MAX_RUNNING, request,
 		       allocated, deadlocked)){
-		killAProcess(pidArray, deadlocked, request, resources);
+
+		fprintf(stderr, "\t\t\t!!!DEADLOCK DETECTED!!!\n");
+
+		killAProcess(pidArray, deadlocked, messages, resources);
 		killed++;
+		
+		setAllocated(resources, allocated);
+		setRequest(resources, request);
+		setAvailable(resources, available);
+		initVector(deadlocked, MAX_RUNNING, 0);
 	}
 
 	return killed;
