@@ -15,6 +15,9 @@ void logRequestDetection(int simPid, int resourceId, int count, Clock time);
 // Logs allocation of a resource
 void logAllocation(int simPid, int resourceId, int count, Clock time);
 
+// Logs when a request is denied and placed in a queue for a resource
+void logEnqueue(int simPid, int quantity, int rNum, int available);
+
 // Prints the resource allocation table every 20 requests by default
 void logTable(ResourceDescriptor * resources);
 

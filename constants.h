@@ -29,7 +29,7 @@
 
 // Used by oss.c
 #define MAX_RUNNING 5	 		// Max number of running child processes
-#define MAX_LAUNCHED 5 			// Max total children launched
+#define MAX_LAUNCHED 10			// Max total children launched
 
 #define SHAREABLE_PROBABILITY 0.2	// Chance resource will be shareable
 
@@ -49,7 +49,7 @@
 
 
 // Used by userProgram.c
-#define TERMINATION_PROBABILITY 0.3	// Chance of terminating
+#define TERMINATION_PROBABILITY 0.1	// Chance of terminating
 #define REQUEST_PROBABILITY 0.9		// Chance of request instead of release
 
 #define MIN_RES MIN_INST		// Min quantity to request or release

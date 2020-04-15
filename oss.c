@@ -30,6 +30,7 @@ static pid_t launchUserProcess(int simPid);
 static void processTerm(int);
 static void processRequest(int);
 static void processRelease(int);
+static void processQueuedRequests(int rNum);
 static void grantRequest(Message * msg);
 static int parseMessage();
 static void assignSignalHandlers();
@@ -130,6 +131,8 @@ void simulateResourceManagement(){
 				processRelease(m);
 			} else if (messages[m].type == TERMINATION){
 				processTerm(m);
+			
+				// Removes from running processes
 				pidArray[m] = EMPTY;
 				running--;
 			}
@@ -153,9 +156,7 @@ void simulateResourceManagement(){
 		// Unlocks the system clock
 		pthread_mutex_unlock(&systemClock->sem);
 
-	} while ((running > 0 || launched < MAX_LAUNCHED) && i < 60);
-
-	sleep(1);
+	} while ((running > 0 || launched < MAX_LAUNCHED) && i < 100);
 }
 
 // Forks & execs a user process with the assigned logical pid, returns child pid
@@ -258,12 +259,12 @@ static void processTerm(int simPid){
 	}
 
 	logRelease(released, NUM_RESOURCES);
-/*
+
 	// Processes old requests for released resources
 	for (r = 0; r < NUM_RESOURCES; r++){
-		if (released[r] > 0) processQueuedReqests(r);
+		if (released[r] > 0) processQueuedRequests(r);
 	}
-*/
+
 	// Resets message
 	initMessage(&messages[simPid], simPid);
 
@@ -275,45 +276,27 @@ static void processTerm(int simPid){
 static void processRequest(int simPid){
 	Message * msg = &messages[simPid]; // The message to respond to
 
-
 	// Grants request if it is less than available
 	if (msg->quantity <= resources[msg->rNum].numAvailable){
-/*		fprintf(stderr, "Granting P%d request for %d of R%d\n",
-			simPid, msg->quantity, msg->rNum);
-
-
-		resources[msg->rNum].allocations[simPid] += msg->quantity;
-		resources[msg->rNum].numAvailable -= msg->quantity;
-
-		// Prints granted request to log file
-		logAllocation(simPid, msg->rNum, msg->quantity, 
-			      systemClock->time);
-
-		logTable(resources);
-
-		msg->quantity = 0;
-		msg->type = VOID;
-
-		// Replies with acknowlegement
-		sendMessage(replyMqId, "request confirmed", simPid + 1);
-*/
-
 		grantRequest(msg);
 
 	// Enqueues message otherwise
 	} else {
+		// Logs request denial
 		fprintf(stderr, "Can't meet P%d request for %d of R%d, in q\n",
 			simPid, msg->quantity, msg->rNum);
+		logEnqueue(simPid, msg->quantity, msg->rNum, 
+			resources[msg->rNum].numAvailable);
 
 		enqueue(&resources[msg->rNum].waiting, msg);
 		msg->type = PENDING_REQUEST;
 	}
 }
-/*
+
 // Examines request queues and grants old requests for available resources
 static void processQueuedRequests(int rNum){
 	Message * msg;				// Stores each queued message	
-	Queue * q = &resources[rNum].waiting	// The queue to process
+	Queue * q = &resources[rNum].waiting;	// The queue to process
 	int qCount = q->count;			// Initial number in queue
 
 	int i = 0;
@@ -332,13 +315,13 @@ static void processQueuedRequests(int rNum){
 		}
 	}
 }
-*/
 
 // Grants a request for resources
 static void grantRequest(Message * msg){
 	fprintf(stderr, "Granting P%d request for %d of R%d\n",
 		msg->simPid, msg->quantity, msg->rNum);
 
+	// Increeases allocation and decreases availablity
 	resources[msg->rNum].allocations[msg->simPid] += msg->quantity;
 	resources[msg->rNum].numAvailable -= msg->quantity;
 

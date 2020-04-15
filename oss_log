@@ -1,47 +1,64 @@
 Master has detected Process P0 requesting 2 of R1 at time 000 : 100000000
 Master granted P0 request for 2 of R1 at time  000 : 100000000
-	Master has responded to P0 completing
-		Resources released are as follows: R1:2
-	Master has responded to P1 completing
-Master has detected Process P2 requesting 1 of R2 at time 000 : 600000000
-Master granted P2 request for 1 of R2 at time  000 : 600000000
+Master has detected Process P0 requesting 1 of R2 at time 000 : 350000000
+Master granted P0 request for 1 of R2 at time  000 : 350000000
 
      R00 R01 R02 R03 
-P00: 00  00  00  00  
+P00: 00  02  01  00  
 P01: 00  00  00  00  
-P02: 00  00  01  00  
+P02: 00  00  00  00  
 P03: 00  00  00  00  
 P04: 00  00  00  00  
 
+Master has detected Process P1 requesting 5 of R1 at time 000 : 500000000
+	P1 requested 5 of R1 but only 3 available, enqueueing request
+Master has acknowledged Process P0 releasing 1 of R2 at time 000 : 600000000
+Master has detected Process P2 requesting 1 of R2 at time 000 : 600000000
+Master granted P2 request for 1 of R2 at time  000 : 600000000
 Master has detected Process P3 requesting 5 of R0 at time 000 : 700000000
 Master granted P3 request for 5 of R0 at time  000 : 700000000
-	Master has responded to P3 completing
-		Resources released are as follows: R0:5
-	Master has responded to P2 completing
-		Resources released are as follows: R2:1
+
+     R00 R01 R02 R03 
+P00: 00  02  00  00  
+P01: 00  00  00  00  
+P02: 00  00  01  00  
+P03: 05  00  00  00  
+P04: 00  00  00  00  
+
+Master has detected Process P0 requesting 1 of R3 at time 000 : 800000000
+Master granted P0 request for 1 of R3 at time  000 : 800000000
+Master has detected Process P3 requesting 1 of R3 at time 000 : 800000000
+	P3 requested 1 of R3 but only 0 available, enqueueing request
+Master has acknowledged Process P2 releasing 1 of R2 at time 000 : 800000000
+Master has detected Process P0 requesting 1 of R2 at time 000 : 800000000
+Master granted P0 request for 1 of R2 at time  000 : 800000000
+
+     R00 R01 R02 R03 
+P00: 00  02  01  01  
+P01: 00  00  00  00  
+P02: 00  00  00  00  
+P03: 05  00  00  00  
+P04: 00  00  00  00  
+
+Master has detected Process P0 requesting 2 of R1 at time 000 : 900000000
+Master granted P0 request for 2 of R1 at time  000 : 900000000
+Master has detected Process P2 requesting 1 of R2 at time 000 : 950000000
+	P2 requested 1 of R2 but only 0 available, enqueueing request
+Master has acknowledged Process P0 releasing 4 of R1 at time 001 : 100000000
 Master has detected Process P4 requesting 1 of R1 at time 001 : 100000000
 Master granted P4 request for 1 of R1 at time  001 : 100000000
 
      R00 R01 R02 R03 
-P00: 00  00  00  00  
+P00: 00  00  01  01  
 P01: 00  00  00  00  
 P02: 00  00  00  00  
-P03: 00  00  00  00  
+P03: 05  00  00  00  
 P04: 00  01  00  00  
 
 Master has detected Process P4 requesting 1 of R2 at time 001 : 200000000
-Master granted P4 request for 1 of R2 at time  001 : 200000000
-Master has detected Process P4 requesting 2 of R1 at time 001 : 400000000
-Master granted P4 request for 2 of R1 at time  001 : 400000000
-
-     R00 R01 R02 R03 
-P00: 00  00  00  00  
-P01: 00  00  00  00  
-P02: 00  00  00  00  
-P03: 00  00  00  00  
-P04: 00  03  01  00  
-
-Master has detected Process P4 requesting 1 of R3 at time 001 : 450000000
-Master granted P4 request for 1 of R3 at time  001 : 450000000
-	Master has responded to P4 completing
-		Resources released are as follows: R1:3, R2:1, R3:1
+	P4 requested 1 of R2 but only 0 available, enqueueing request
+Master has acknowledged Process P0 releasing 1 of R3 at time 001 : 500000000
+Master has detected Process P0 requesting 1 of R3 at time 001 : 650000000
+Master granted P0 request for 1 of R3 at time  001 : 650000000
+Master has detected Process P0 requesting 4 of R0 at time 001 : 900000000
+	P0 requested 4 of R0 but only 0 available, enqueueing request

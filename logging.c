@@ -39,6 +39,15 @@ void logAllocation(int simPid, int resourceId, int count, Clock time){
 
 }
 
+// Logs when a request is denied and placed in a queue for a resource
+void logEnqueue(int simPid, int quantity, int rNum, int available){
+	if (++lines > MAX_LOG_LINES) return;
+
+	fprintf(log, "\tP%d requested %d of R%d but only %d available, " \
+		"enqueueing request\n", simPid, quantity, rNum, available);
+
+}
+
 // Prints the resource allocation table every 20 requests by default
 void logTable(ResourceDescriptor * resources){
 	if (++lines > MAX_LOG_LINES) return;
