@@ -27,10 +27,13 @@ void logDeadlockedProcesses(int * deadlockedPids, int size);
 // Prints that a deadlock resolution attempt is being made
 void logResolutionAttempt();
 
+// Prints a message indicating that a process has terminated on its own
+void logCompletion(int simPid);
+
 // Prints a message indicating that a process with logical pid was killed
 void logKill(int simPid);
 
 // Prints the resource class ids and count of released resources
-void logRelease(int * resourceIds, int * numReleased, int size);
+void logRelease(int * resources, int size);
 
 #endif

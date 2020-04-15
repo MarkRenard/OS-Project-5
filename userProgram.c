@@ -105,6 +105,9 @@ int main(int argc, char * argv[]){
 		if (msgSent){
 			fprintf(stderr, "\n\tP%d WAITING FOR MSG\n\n", simPid);
 			waitForMessage(replyMqId, reply, simPid);
+			fprintf(stderr, "\n\tP%d ULTIMATE ANSWER RECEIVED\n\n",
+				simPid);
+			msgSent = false;
 		}
 	}
 

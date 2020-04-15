@@ -40,7 +40,7 @@ static const Clock DETECTION_INTERVAL = {1, 0};
 static const Clock MIN_FORK_TIME = {0, 1 * MILLION};
 static const Clock MAX_FORK_TIME = {0, 250 * MILLION};
 static const Clock MAIN_LOOP_INCREMENT = {0, 50 * MILLION};
-static const struct timespec SLEEP = {0, 10000};
+static const struct timespec SLEEP = {0, 500000};
 
 // Static global variables
 static char * shm;				// Pointer to the shared memory region
@@ -123,40 +123,17 @@ void simulateResourceManagement(){
 
 		// Responds to new messages from the queue
 		while ((m = parseMessage()) != -1){
-			if (messages[m].type == REQUEST)
+			if (messages[m].type == REQUEST){
 				processRequest(m);
-			else if (messages[m].type == RELEASE)
+			} else if (messages[m].type == RELEASE) {
 				processRelease(m);
-			else if (messages[m].type == TERMINATION)
+			} else if (messages[m].type == TERMINATION){
 				processTerm(m);
 				running--;
-		}
-
-		// Loops through message array and checks for new messages
-/*		for (m = 0; m < MAX_RUNNING; m++){
-//			fprintf(stderr, "  msg[%d].type: %d address: %p\n",
-//				m, messages[m].type, &(messages[m].type));
-
-			// Responds to termination, releasing resources
-			if (messages[m].type == TERMINATION){
-				processTerm(clock, resources, messages, m);
-//				waitForProcess(pidArray[m]);
-				pidArray[m] = EMPTY;
-
-				running--;
-
-			// Otherwise responds to request or release
-			} else if (messages[m].type == REQUEST){
-				fprintf(stderr, "Request from P%d for %d of R%d\n",
-					m, messages[m].quantity, messages[m].rNum);
-				processRequest(clock, resources, messages, m);
-			} else if (messages[m].type == RELEASE){
-				processRelease(clock, resources, messages, m);
 			}
 		}
-*/
-/*
 
+/*
 		// Detects and resolves deadlock at regular intervals
 		if (clockCompare(clock->time, timeToDetect) >= 0){
 			logDeadlockDetection(clock->time);
@@ -166,17 +143,6 @@ void simulateResourceManagement(){
 		}
 */
 
-
-/*
-		// Detects and resolves deadlock at regular intervals
-		if (clockCompare(clock->time, timeToDetect) >= 0){
-			if (deadlockDetected(clock->time, resources)){	
-				do {
-					running--;
-				} while(!resolveDeadlock(pidArray, resources));
-			}
-		}
-*/
 		incrementClock(&systemClock->time, MAIN_LOOP_INCREMENT);
 		printTimeln(stderr, systemClock->time);
 
@@ -256,6 +222,9 @@ static int parseMessage(){
 
 			fprintf(stderr, "Receiving that P%d terminated\n",
 				simPid);
+
+			logCompletion(simPid);
+
 			return simPid;
 		}
 
@@ -276,15 +245,23 @@ static void processTerm(int simPid){
 
 	fprintf(stderr, "Responding to termination of process %d\n", simPid);
 
+	int released[NUM_RESOURCES];
+
 	// Frees all resources previously allocated to the process
 	int r;
 	for (r = 0; r < NUM_RESOURCES; r++){
+		released[r] = resources[r].allocations[simPid];
 		resources[r].numAvailable += resources[r].allocations[simPid];
 		resources[r].allocations[simPid] = 0;
 	}
 
+	logRelease(released, NUM_RESOURCES);
+
 	// Resets message
 	initMessage(&messages[simPid], simPid);
+
+	// Replies with acknowlegement
+	sendMessage(replyMqId, "42", simPid + 1);
 }
 
 // Responds to a request for resources by granting it or enqueueing the request
@@ -307,6 +284,9 @@ static void processRequest(int simPid){
 		msg->quantity = 0;
 		msg->type = VOID;
 
+		// Replies with acknowlegement
+		sendMessage(replyMqId, "42", simPid + 1);
+
 	// Enqueues message otherwise
 	} else {
 		fprintf(stderr, "Can't meet P%d request for %d of R%d, in q\n",
@@ -328,7 +308,10 @@ static void processRelease(int simPid){
 	resources[msg->rNum].numAvailable += msg->quantity;
 
 	msg->quantity = 0;
-	msg->type = VOID;	
+	msg->type = VOID;
+
+	// Replies with acknowlegement
+	sendMessage(replyMqId, "42", simPid + 1);
 }
 
 // Determines the processes response to ctrl + c or alarm

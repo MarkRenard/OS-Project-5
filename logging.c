@@ -103,18 +103,25 @@ void logKill(int simPid){
 	fprintf(log, "\tKilling process P%d\n", simPid);
 }
 
+// Prints a message indicating that a process has terminated on its own
+void logCompletion(int simPid){
+	if (++lines > MAX_LOG_LINES) return;
+
+	fprintf(log, "Master has responded to P%d completing\n", simPid);
+}
+
 // Prints the resource class ids and quantity of released resources
-void logRelease(int * resourceIds, int * numReleased, int size){
-	if (++lines > MAX_LOG_LINES || size < 1) return;
+void logRelease(int * resources, int size){
+	if (++lines > MAX_LOG_LINES) return;
 
 	// Prints message, first resource released and quantity
 	fprintf(log, "\t\tResources released are as follows: R%d:%d",
-		resourceIds[0], numReleased[0]);
+		resources[0], 0);
 
 	// Prints subsequent resources released and quantity
-	int i = 0;
+	int i = 1;
 	for ( ; i < size; i++){
-		fprintf(log, ", R%d:%d", resourceIds[i], numReleased[i]);
+		fprintf(log, ", R%d:%d", i, resources[i]);
 	}
 	fprintf(log, "\n");
 }
