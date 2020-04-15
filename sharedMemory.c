@@ -17,7 +17,12 @@ static int shmid; // The shmid of the shared memory region
 
 // Returns a pointer to a new shared memory region
 char * sharedMemory(int size, int mask){
+
+	fprintf(stderr, "\t\tsharedMemory - SHMKEY: %d, size: %d, mask: %d\n",
+		SHMKEY, size, mask); 
+
 	shmid = shmget ( SHMKEY, size, 0600 | mask );
+	fprintf(stderr, "\t\tsharedMemory - shmid: %d\n", shmid);
 
 	// Prints error message and exits if unsuccessful
 	if (shmid == -1)
@@ -45,3 +50,14 @@ void initializeSharedMemory(char * shm, int bufferSize, char byte){
 		shm[i] = byte;
 	}
 }
+
+// Prints the contents of shared memory
+void printSharedMemory(char * shm, int size){
+	int numInts = size / sizeof(int);
+
+	int i, j = 0;
+	for (i = 0; i < numInts; i++){
+		fprintf(stderr, "%c", ((int*)shm)[i]);
+		if (++j == 80) fprintf(stderr, "\n");
+	}
+}	

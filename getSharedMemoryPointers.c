@@ -10,7 +10,7 @@
 #include "resourceDescriptor.h"
 #include "sharedMemory.h"
 
-void getSharedMemoryPointers(char ** shm,  ProtectedClock ** systemClock,
+int getSharedMemoryPointers(char ** shm,  ProtectedClock ** systemClock,
 			     ResourceDescriptor ** resources,
 			     Message ** messages, int flags) {
 
@@ -29,6 +29,9 @@ void getSharedMemoryPointers(char ** shm,  ProtectedClock ** systemClock,
 	*resources = (ResourceDescriptor *)(*shm + sizeof(ProtectedClock));
 
 	// Gets pointer to message array
-	*messages = (Message *)(*resources + sizeof(Message) * MAX_RUNNING);
+	*messages = (Message *)(*resources + sizeof(ResourceDescriptor) \
+		    * NUM_RESOURCES);
+
+	return shmSize;
 }
 

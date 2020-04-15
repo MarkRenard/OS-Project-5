@@ -8,12 +8,25 @@
 #include <stdbool.h>
 #include "constants.h"
 
+typedef enum msgType {
+	VOID, TERMINATION, REQUEST, PENDING_REQUEST, RELEASE
+} MsgType;
+
 typedef struct message{
-	bool pending;
-	int requested[NUM_RESOURCES];
+	int simPid;			// The simPid of the sender
+	
+	int type;			// The type of the message
+	int rNum;			// The id of the resource, if applicable
+	int quantity;			// The quantity of the resource requested
+
+	int target[NUM_RESOURCES]; 	// Target number of each resource
+	int numClassesHeld;	 	// Number of resource classes held
+
+	struct message * previous;	// Previous message in queue
 } Message;
 
-void initMessage(Message *);
+void initMessage(Message *, int simPid);
+void initMessageArray(Message *);
 
 #endif
 

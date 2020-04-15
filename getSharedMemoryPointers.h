@@ -13,8 +13,8 @@
 #include "resourceDescriptor.h"
 #include "sharedMemory.h"
 
-void getSharedMemoryPointers(char ** shm,  ProtectedClock ** systemClock,
-                             ResourceDescriptor ** resources,
-			     Message ** messages, int flags);
+int getSharedMemoryPointers(char ** shm,  ProtectedClock ** systemClock,
+                            ResourceDescriptor ** resources,
+			    Message ** messages, int flags);
 
 #endif

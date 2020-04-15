@@ -5,13 +5,26 @@
 
 #include "message.h"
 #include "constants.h"
+#include <stdio.h>
+// Initializes a single message to default values
+void initMessage(Message * msg, int simPid){
+	msg->simPid = simPid;
 
-// Initializes pending to false and requested to 0 for each resource
-void initMessage(Message * msg){
-	msg->pending = false;
+	msg->type = VOID;
 	
 	int i = 0;
 	for( ; i < NUM_RESOURCES; i++)
-		msg->requested[i] = 0;
+		msg->target[i] = 0;
 
+	msg->quantity = 0;
+	msg->numClassesHeld = 0;
+}
+
+// Initializes the shared array of messages to default values
+void initMessageArray(Message * msgArr){
+	int i;
+	for (i = 0; i < MAX_RUNNING; i++){
+		fprintf(stderr, "Attempting to initialize msg for P%d\n", i);
+		initMessage(&msgArr[i], i);
+	}
 }

@@ -7,6 +7,7 @@
 #define RANDOMGEN_H
 
 unsigned int randUnsigned(unsigned int min, unsigned int max);
+int randInt(int min, int max);
 int randBinary(double probability);
 
 #endif

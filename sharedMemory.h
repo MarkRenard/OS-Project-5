@@ -12,5 +12,6 @@ char * sharedMemory(int size, int mask);
 void removeSegment();
 void detach(char * shm);
 void initializeSharedMemory(char * shm, int bufferSize, char byte);
+void printSharedMemory(char * shm, int size);
 
 #endif

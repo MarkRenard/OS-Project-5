@@ -35,9 +35,9 @@ void incrementPClock(ProtectedClock * pClockPtr, Clock increment){
 Clock getPTime(ProtectedClock * pClockPtr){
 	Clock time;
 
-	pthread_mutex_lock(&pClockPtr->sem);
+	//pthread_mutex_lock(&pClockPtr->sem);
 	copyTime(&time, pClockPtr->time);
-	pthread_mutex_unlock(&pClockPtr->sem);
+	//pthread_mutex_unlock(&pClockPtr->sem);
 
 	return time;
 }

@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define RAND_DOUBLE_PRECISION 1000.0
-
 // Random int in range overlaping with [0, (RAND_MAX + 1) * RAND_MAX + RAND_MAX]
 unsigned int randUnsigned(unsigned int min, unsigned int max){
 	unsigned int rawRandom;	// Biased raw output from rand
@@ -30,32 +28,22 @@ unsigned int randUnsigned(unsigned int min, unsigned int max){
 	return rawRandom % rangeSize + min;
 }
 
+// Returns random int in range overlapping with [0, RAND_MAX]
+int randInt(int min, int max){
+	int rawRandom;
+	int rangeSize = max - min + 1;
+
+	// Throws out overrepresented values to de-bias PRNG
+	do {
+		rawRandom = rand();
+	} while (rawRandom > RAND_MAX - RAND_MAX % rangeSize);
+
+	return rawRandom % rangeSize + min;
+}
+
 // Returns a 1 with specified probability, 0 otherwise
 int randBinary(double probability){
 	int threshold = (int)(RAND_MAX * probability);
 
 	return rand() < threshold ? 1 : 0;
 }
-/*
-// Returns a double in range [min, max];
-double randDouble(double min, double max){
-	double rangeSize = max - min;
-	int rangeSizeInt = (int)(rangeSize * RAND_DOUBLE_PRECISION) + 1;
-
-	printf("\nrangeSize: %f\n", rangeSize);
-	printf("rangeSizeInt: %d\n", rangeSizeInt);
-	
-	int rawRandom;
-
-	// Throws out overrepresented values to de-bias PRNG
-	do {
-		rawRandom = rand();
-	} while (rawRandom > RAND_MAX - RAND_MAX % rangeSizeInt);
-
-	printf("\nrawRandom: %d\n", rawRandom);
-
-	printf("(double)(rawRandom % rangeSizeInt): %f\n", (double)(rawRandom % rangeSizeInt));
-	printf("(double) RAND_DOUBLE_PRECISION + min: %f\n\n", (double) RAND_DOUBLE_PRECISION + min);
-
-	return ((double)(rawRandom % rangeSizeInt))/((double)RAND_DOUBLE_PRECISION) + min;
-}*/

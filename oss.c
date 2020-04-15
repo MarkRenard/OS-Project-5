@@ -9,9 +9,11 @@
 #include "perrorExit.h"
 #include "pidArray.h"
 #include "protectedClock.h"
+#include "queue.h"
 #include "resourceDescriptor.h"
 
 #include <errno.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -21,31 +23,37 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// Constants
-const Clock DETECTION_INTERVAL = {1, 0};
-const Clock MIN_FORK_TIME = {0, 1 * MILLION};
-const Clock MAX_FORK_TIME = {0, 250 * MILLION};
-const Clock MAIN_LOOP_INCREMENT = {0, 50 * MILLION};
+//static void processMessage(ProtectedClock *, ResourceDescriptor *, Message *, 
+//			    int*, int*);
 
 // Prototypes
 static void simulateResourceManagement(ProtectedClock *, ResourceDescriptor *,
 				       Message *);
-static void populateDescriptors(ResourceDescriptor * resources);
 static pid_t launchUserProcess(int simPid);
-static bool processCompleted(pid_t * pidArray);
-static void processMessages(ProtectedClock *, ResourceDescriptor *, Message *);
+//static bool processCompleted(pid_t * pidArray);
+static void processTerm(ProtectedClock*, ResourceDescriptor*, Message*, int);
+static void processRequest(ProtectedClock*, ResourceDescriptor*, Message*, int);
+static void processRelease(ProtectedClock*, ResourceDescriptor*, Message*, int);
+static void waitForProcess(pid_t pid);
 static bool deadlockDetected(Clock, const ResourceDescriptor *);
 static bool resolveDeadlock(pid_t *, ResourceDescriptor *);
 static void assignSignalHandlers();
 static void cleanUpAndExit(int param);
 static void cleanUp();
 
+// Constants
+static const Clock DETECTION_INTERVAL = {1, 0};
+static const Clock MIN_FORK_TIME = {0, 1 * MILLION};
+static const Clock MAX_FORK_TIME = {0, 250 * MILLION};
+static const Clock MAIN_LOOP_INCREMENT = {0, 50 * MILLION};
+static const struct timespec SLEEP = {0, 1000};
+
 // Static global variables
 static char * shm;	// Pointer to the shared memory region
 
 int main(int argc, char * argv[]){
 	ProtectedClock * systemClock;		// Shared memory system clock
-	ResourceDescriptor * resources;		// Shared memory resource table
+	ResourceDescriptor * resources;	// Shared memory resource table
 	Message * messages;			// Shared memory message vector
 
 	exeName = argv[0];	// Assigns exeName for perrorExit
@@ -56,8 +64,19 @@ int main(int argc, char * argv[]){
 	srand(BASE_SEED - 1);   // Seeds pseudorandom number generator
 
 	// Creates shared memory region and gets pointers
-	getSharedMemoryPointers(&shm, &systemClock, &resources, 
-				&messages, IPC_CREAT);
+	int size = getSharedMemoryPointers(&shm, &systemClock, &resources, 
+			  		   &messages, IPC_CREAT);
+	printSharedMemory(shm, size);
+
+	// Initializes system clock and shared arrays
+	initPClock(systemClock);
+	initResources(resources);
+	initMessageArray(messages);
+
+	fprintf(stderr, "shm: %p\n", shm);
+	fprintf(stderr, "clock: %p\n", systemClock);
+	fprintf(stderr, "resources: %p\n", resources);
+	fprintf(stderr, "messages: %p\n\n", messages);
 
 	// Generates processes, grants requests, and resolves deadlock in a loop
 	simulateResourceManagement(systemClock, resources, messages);
@@ -73,18 +92,15 @@ void simulateResourceManagement(ProtectedClock * clock,
 			        Message * messages){
 
 	Clock timeToFork = zeroClock();		 // Time to launch user process 
-	Clock timeToDetect = DETECTION_INTERVAL; // Time to resolve deadlock
+//	Clock timeToDetect = DETECTION_INTERVAL; // Time to resolve deadlock
 
 	pid_t pidArray[MAX_RUNNING];		// Array of user process pids
+	initPidArray(pidArray);			// Sets pids to -1
 	int simPid;				// Temporary logical pid storage
 	int running = 0;			// Currently running child count
 	int launched = 0;			// Total children launched
 
-	initPidArray(pidArray);			// Sets pids to -1
-	initPClock(clock);			// Initializes protected clock
-	populateDescriptors(resources);		// Sets initial resources
-
-	int i = 0;
+	int i = 0, m;				// Loop control variables
 
 	// Launches processes and resolves deadlock until limits reached
 	do {
@@ -111,13 +127,41 @@ void simulateResourceManagement(ProtectedClock * clock,
 			incrementClock(&timeToFork, randomTime(MIN_FORK_TIME,
 							       MAX_FORK_TIME));
 		}
-		
-		// Waits for completed child processes
-		while (processCompleted(pidArray)) running--;
 
-		// Checks for resource request or release, updates descriptors
-		processMessages(clock, resources, messages);
+		// Loops through message array and checks for new messages
+		for (m = 0; m < MAX_RUNNING; m++){
+			fprintf(stderr, "  msg[%d].type: %d address: %p\n",
+				m, messages[m].type, &(messages[m].type));
 
+			// Responds to termination, releasing resources
+			if (messages[m].type == TERMINATION){
+				processTerm(clock, resources, messages, m);
+				waitForProcess(pidArray[m]);
+				pidArray[m] = EMPTY;
+
+				running--;
+
+			// Otherwise responds to request or release
+			} else if (messages[m].type == REQUEST){
+				fprintf(stderr, "Request from %d for %d of %d",
+					m, messages[m].quantity, messages[m].rNum);
+				processRequest(clock, resources, messages, m);
+			} else if (messages[m].type == RELEASE){
+				processRelease(clock, resources, messages, m);
+			}
+		}
+/*
+		// Detects and resolves deadlock at regular intervals
+		if (clockCompare(clock->time, timeToDetect) >= 0){
+			logDeadlockDetection(clock->time);
+
+			running -= resolveDeadlock(pidArray, resources, 
+						   messages);
+		}
+*/
+
+
+/*
 		// Detects and resolves deadlock at regular intervals
 		if (clockCompare(clock->time, timeToDetect) >= 0){
 			if (deadlockDetected(clock->time, resources)){	
@@ -126,24 +170,23 @@ void simulateResourceManagement(ProtectedClock * clock,
 				} while(!resolveDeadlock(pidArray, resources));
 			}
 		}
-
+*/
 		incrementClock(&clock->time, MAIN_LOOP_INCREMENT);
+		printTimeln(stderr, clock->time);
+
+		nanosleep(&SLEEP, NULL);
 
 		// Unlocks the system clock
 		pthread_mutex_unlock(&clock->sem);
 
-	} while (running > 0 || launched < MAX_LAUNCHED);
-}
+	} while ((running > 0 || launched < MAX_LAUNCHED) && i < 60);
 
-static void populateDescriptors(ResourceDescriptor * resources){
-	printf("populateDescriptors called\n");
+	sleep(1);
 }
 
 // Forks & execs a user process with the assigned logical pid, returns child pid
 static pid_t launchUserProcess(int simPid){
 	fprintf(stderr, "launchUserProcess(%d) called - ", simPid);
-
-//	return 0;
 
 	pid_t realPid;
 
@@ -165,12 +208,13 @@ static pid_t launchUserProcess(int simPid){
 
 }
 
+/*
 // Returns true of a process has completed and removes its pid from the array
 static bool processCompleted(pid_t * pidArray){
 //	int random;
 
 	fprintf(stderr, "processCompleted called - ");
-/*
+
 	// Returns false if there are no "running processes"
 	if (isEmpty(pidArray)) return false;
 
@@ -184,7 +228,7 @@ static bool processCompleted(pid_t * pidArray){
 	fprintf(stderr, "processCompleted - pid %d \"completed\"\n", random);
 
 	return true;
-*/
+
 	pid_t childPid;	// Index of a completed child
 
 	// Waits for a completed child if one exists and gets child pid
@@ -204,13 +248,94 @@ static bool processCompleted(pid_t * pidArray){
 	return true;
 
 }
+*/
 
-// Reads message array, responds to requests, and releases resources
-static void processMessages(ProtectedClock * clock, 
-			    ResourceDescriptor * resources, Message * messages){
-	fprintf(stderr, "processMessages called\n");
+// Responds to a termination message by releasing associated resources
+static void processTerm(ProtectedClock * clock, ResourceDescriptor * resources,
+			Message * messages, int simPid){
+
+	fprintf(stderr, "Responding to termination of process %d\n", simPid);
+
+	// Frees all resources previously allocated to the process
+	int r;
+	for (r = 0; r < NUM_RESOURCES; r++){
+		resources[r].numAvailable += resources[r].allocations[simPid];
+		resources[r].allocations[simPid] = 0;
+	}
+
+	// Resets message
+	initMessage(&messages[simPid], simPid);
+}
+
+// Responds to a request for resources by granting it or enqueueing the request
+static void processRequest(ProtectedClock * clock, ResourceDescriptor * resources,
+			   Message * messages, int simPid){
+	Message * msg = &messages[simPid]; // The message to respond to
+
+
+	// Grants request if it is less than available
+	if (msg->quantity < resources[msg->rNum].numAvailable){
+		fprintf(stderr, "Granting P%d request for %d of R%d\n",
+			simPid, msg->quantity, msg->rNum);
+
+		resources[msg->rNum].allocations[simPid] += msg->quantity;
+		resources[msg->rNum].numAvailable -= msg->quantity;
+
+		msg->quantity = 0;
+		msg->type = VOID;
+
+	// Enqueues message otherwise
+	} else {
+		fprintf(stderr, "Can't meet P%d request for %d of R%d, in q\n",
+			simPid, msg->quantity, msg->rNum);
+
+		enqueue(&resources[msg->rNum].waiting, msg);
+		msg->type = PENDING_REQUEST;
+	}
+}
+
+// Releases resources from a process
+static void processRelease(ProtectedClock * clock, ResourceDescriptor * resources,
+			   Message * messages, int simPid){
+	Message * msg = &messages[simPid];
+
+	resources[msg->rNum].allocations[simPid] -= msg->quantity;
+	resources[msg->rNum].numAvailable += msg->quantity;
+
+	msg->quantity = 0;
+	msg->type = VOID;	
+}
+
+static void waitForProcess(pid_t pid){
+	int retval;
+
+	while ((retval = waitpid(pid, NULL, 0)) == -1 && errno == EINTR);
+
+	if (retval == -1) perrorExit("Wait failed");
 
 }
+
+// Reads a message and responds to request, release, or termination
+/*static void processMessage(ProtectedClock * clock, 
+			    ResourceDescriptor * resources, 
+			    Message * message,
+			    pid_t * pidArray,
+			    int * running){
+
+	fprintf(stderr, "processMessages called\n");
+
+	int i;
+
+
+	// Releases resources on termination
+	if (message->terminating){
+		for (i = 0; i < NUM_RESOURCES; i++){
+			resources[i].
+		}	
+	}
+
+}
+*/
 
 // Returns true if the current state is a deadlock state, logs time
 static bool deadlockDetected(Clock now, const ResourceDescriptor * resources){

@@ -9,8 +9,6 @@
 #include "constants.h"
 #include "perrorExit.h"
 
-#define EMPTY -1
-
 // Assigns a value of EMPTY to all elements in a pid_t array
 void initPidArray(pid_t * pidArray){
 	int i = 0;

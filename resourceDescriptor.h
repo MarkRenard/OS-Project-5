@@ -7,18 +7,18 @@
 #define RESOURCEDESCRIPTOR_H
 
 #include "constants.h"
+#include "queue.h"
 #include <stdbool.h>
 
 typedef struct resourceDescriptor{
-	int resourceId;			// Unique identifier for the resource
 	bool shareable;			// Whether the resource is shareable
-
 	int numInstances;		// Total number of existing instances
 	int numAvailable;		// Number of unclaimed instances
-	int allocations[MAX_LAUNCHED];	// Number owned by each logical pid
+	int allocations[MAX_RUNNING];	// Number owned by each logical pid
 
+	Queue waiting;			// Queue of pending requests
 } ResourceDescriptor;
 
-void initResourceDescriptor(ResourceDescriptor *);
+void initResources(ResourceDescriptor *);
 
 #endif
