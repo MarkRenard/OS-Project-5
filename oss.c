@@ -9,6 +9,7 @@
 #include "perrorExit.h"
 #include "pidArray.h"
 #include "protectedClock.h"
+#include "qMsg.h"
 #include "queue.h"
 #include "resourceDescriptor.h"
 
@@ -23,20 +24,14 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-//static void processMessage(ProtectedClock *, ResourceDescriptor *, Message *, 
-//			    int*, int*);
-
 // Prototypes
 static void simulateResourceManagement(ProtectedClock *, ResourceDescriptor *,
 				       Message *);
 static pid_t launchUserProcess(int simPid);
-//static bool processCompleted(pid_t * pidArray);
 static void processTerm(ProtectedClock*, ResourceDescriptor*, Message*, int);
 static void processRequest(ProtectedClock*, ResourceDescriptor*, Message*, int);
 static void processRelease(ProtectedClock*, ResourceDescriptor*, Message*, int);
-static void waitForProcess(pid_t pid);
-static bool deadlockDetected(Clock, const ResourceDescriptor *);
-static bool resolveDeadlock(pid_t *, ResourceDescriptor *);
+static void parseMessages(Message * messages);
 static void assignSignalHandlers();
 static void cleanUpAndExit(int param);
 static void cleanUp();
@@ -50,6 +45,8 @@ static const struct timespec SLEEP = {0, 1000};
 
 // Static global variables
 static char * shm;	// Pointer to the shared memory region
+static int requestMqId;	// Id of message queue for resource requests & release
+static int replyMqId;	// Id of message queue for replies from oss
 
 int main(int argc, char * argv[]){
 	ProtectedClock * systemClock;		// Shared memory system clock
@@ -66,18 +63,20 @@ int main(int argc, char * argv[]){
 	// Creates shared memory region and gets pointers
 	int size = getSharedMemoryPointers(&shm, &systemClock, &resources, 
 			  		   &messages, IPC_CREAT);
-	printSharedMemory(shm, size);
+        // Creates message queues
+        requestMqId = getMessageQueue(DISPATCH_MQ_KEY, MQ_PERMS | IPC_CREAT);
+        replyMqId = getMessageQueue(REPLY_MQ_KEY, MQ_PERMS | IPC_CREAT);
 
 	// Initializes system clock and shared arrays
 	initPClock(systemClock);
 	initResources(resources);
 	initMessageArray(messages);
-
+/*
 	fprintf(stderr, "shm: %p\n", shm);
 	fprintf(stderr, "clock: %p\n", systemClock);
 	fprintf(stderr, "resources: %p\n", resources);
 	fprintf(stderr, "messages: %p\n\n", messages);
-
+*/
 	// Generates processes, grants requests, and resolves deadlock in a loop
 	simulateResourceManagement(systemClock, resources, messages);
 
@@ -128,6 +127,9 @@ void simulateResourceManagement(ProtectedClock * clock,
 							       MAX_FORK_TIME));
 		}
 
+		// Gets messages from queue
+		parseMessages(messages);
+
 		// Loops through message array and checks for new messages
 		for (m = 0; m < MAX_RUNNING; m++){
 			fprintf(stderr, "  msg[%d].type: %d address: %p\n",
@@ -135,12 +137,12 @@ void simulateResourceManagement(ProtectedClock * clock,
 
 			// Responds to termination, releasing resources
 			if (messages[m].type == TERMINATION){
-				processTerm(clock, resources, messages, m);
+/*				processTerm(clock, resources, messages, m);
 				waitForProcess(pidArray[m]);
 				pidArray[m] = EMPTY;
 
 				running--;
-
+*/
 			// Otherwise responds to request or release
 			} else if (messages[m].type == REQUEST){
 				fprintf(stderr, "Request from %d for %d of %d",
@@ -150,7 +152,9 @@ void simulateResourceManagement(ProtectedClock * clock,
 				processRelease(clock, resources, messages, m);
 			}
 		}
+
 /*
+
 		// Detects and resolves deadlock at regular intervals
 		if (clockCompare(clock->time, timeToDetect) >= 0){
 			logDeadlockDetection(clock->time);
@@ -186,7 +190,6 @@ void simulateResourceManagement(ProtectedClock * clock,
 
 // Forks & execs a user process with the assigned logical pid, returns child pid
 static pid_t launchUserProcess(int simPid){
-	fprintf(stderr, "launchUserProcess(%d) called - ", simPid);
 
 	pid_t realPid;
 
@@ -202,53 +205,61 @@ static pid_t launchUserProcess(int simPid){
 		perrorExit("Failed to execl");
 	}
 
-	fprintf(stderr, "Process %d real pid: %d\n", simPid, realPid);
+
+	fprintf(stderr, "launchUserProcess(%d) called - real pid: %d\n", 
+		simPid, realPid);
 
 	return realPid;
 
 }
 
-/*
-// Returns true of a process has completed and removes its pid from the array
-static bool processCompleted(pid_t * pidArray){
-//	int random;
+static void parseMessages(Message * messages){
+	char * msgText[MSG_SZ];	// Raw text of each message
+	int msgInt;		// Integer form of each message
+	int rNum;		// The index of the resource
+	int quantity;		// Quantity requested or released
 
-	fprintf(stderr, "processCompleted called - ");
+	long int qMsgType;	// Raw type of msg
+	int simPid;		// simPid of sender
 
-	// Returns false if there are no "running processes"
-	if (isEmpty(pidArray)) return false;
+	while (getMessage(requestMqId, msgText, &qMsgType)){
+		simPid = (int)(qMsgType - 1);	// Subtract 1 to get simPid
+		msgInt = atoi(msgText);		// Converts to encoded int
 
-	// Returns false with probability 1/2
-	if (rand() % 2) return false;
-	
-	// Removes a pid from the array and returns true
-	random = randomPidIndex(pidArray);
-	pidArray[random] = -1;
+		// Parses release messages
+		if (msgInt < 0){
+			quantity = -msgInt % (MAX_INST + 1);
+			rNum = -msgInt / (MAX_INST + 1);
+			messages[simPid].type = RELEASE;
 
-	fprintf(stderr, "processCompleted - pid %d \"completed\"\n", random);
+			fprintf(stderr, "Receiving that P%d released %d of R%d\n",
+				simPid, quantity, rNum);
 
-	return true;
+		// Parses request messages
+		} else if (msgInt > 0){
+			quantity = msgInt % (MAX_INST + 1);
+			rNum = msgInt / (MAX_INST + 1);
+			messages[simPid].type = REQUEST;
 
-	pid_t childPid;	// Index of a completed child
+			fprintf(stderr, "Receiving that P%d requested %d of R%d\n",
+				simPid, quantity, rNum);
 
-	// Waits for a completed child if one exists and gets child pid
-	while((childPid = waitpid(-1, NULL, WNOHANG)) == -1 && errno == EINTR);
+		// Parses termination messages
+		} else {
+			messages[simPid].type = TERMINATION;
 
-	// Returns false if no child has completed
-	if (childPid == -1 || childPid == 0){
-		fprintf(stderr, "no children completed\n");
-		 return false;
-	}
+			fprintf(stderr, "Receiving that P%d terminated\n");
+			continue;
+		}
 
-	fprintf(stderr, "removing real pid %d\n", childPid);
-	
-	// Sets value at index corresponding to the finished pid to EMPTY
-	removePid(pidArray, childPid);
-
-	return true;
+		messages[simPid].quantity = quantity;
+		messages[simPid].rNum = rNum;
+	}		
 
 }
-*/
+
+// Gets message
+//static void parseMessages(Message * messages);
 
 // Responds to a termination message by releasing associated resources
 static void processTerm(ProtectedClock * clock, ResourceDescriptor * resources,
@@ -306,68 +317,6 @@ static void processRelease(ProtectedClock * clock, ResourceDescriptor * resource
 	msg->type = VOID;	
 }
 
-static void waitForProcess(pid_t pid){
-	int retval;
-
-	while ((retval = waitpid(pid, NULL, 0)) == -1 && errno == EINTR);
-
-	if (retval == -1) perrorExit("Wait failed");
-
-}
-
-// Reads a message and responds to request, release, or termination
-/*static void processMessage(ProtectedClock * clock, 
-			    ResourceDescriptor * resources, 
-			    Message * message,
-			    pid_t * pidArray,
-			    int * running){
-
-	fprintf(stderr, "processMessages called\n");
-
-	int i;
-
-
-	// Releases resources on termination
-	if (message->terminating){
-		for (i = 0; i < NUM_RESOURCES; i++){
-			resources[i].
-		}	
-	}
-
-}
-*/
-
-// Returns true if the current state is a deadlock state, logs time
-static bool deadlockDetected(Clock now, const ResourceDescriptor * resources){
-	bool detected = !((bool)(rand() % 5));
-
-	fprintf(stderr, "deadlockDetected called - ");
-
-	if (detected) fprintf(stderr, "DETECTED\n");
-	else fprintf(stderr, "NOT detected\n");
-
-	return detected;
-}
-
-// Selects a single process to terminate and returns true if deadlock resolved
-static bool resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources){
-	fprintf(stderr, "resolveDeadlock called - ");
-
-	if (isEmpty(pidArray)) return true;
-
-	int random = randomPidIndex(pidArray);
-	pid_t randomPid = pidArray[random];
-
-	kill(randomPid, SIGKILL);
-	waitpid(randomPid, NULL, 0);
-
-	fprintf(stderr, "removing process %d with pid %d\n", random, randomPid);
-
-	removePid(pidArray, randomPid);
-
-	return (bool)(rand() % 2);
-}
-
 // Determines the processes response to ctrl + c or alarm
 static void assignSignalHandlers(){
 	struct sigaction sigact;
@@ -417,6 +366,10 @@ static void cleanUp(){
 
 	// Kills all other processes in the same process group
 	kill(0, SIGQUIT);
+
+	// Removes message queues
+	removeMessageQueue(requestMqId);
+	removeMessageQueue(replyMqId);
 
 	// Detatches from and removes shared memory
 	detach(shm);
