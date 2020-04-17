@@ -36,6 +36,17 @@ static int targetHeld[NUM_RESOURCES];	// Number of each resource to be held
 static int requestMqId;			// Message queue id of request queue
 static int replyMqId;			// Message queue id of reply queue
 
+static void printTargets(int pid){
+	fprintf(stderr, "\n\tP%d HAS:\n", pid);
+
+	int i = 0;
+	for(; i < NUM_RESOURCES; i++){
+		fprintf(stderr, "\t\tP%d, R%d: %d\n", pid, i, targetHeld[i]);
+	}
+	
+}
+
+
 int main(int argc, char * argv[]){
 	exeName = argv[0];		// Sets exeName for perrorExit
 	int simPid = atoi(argv[1]);	// Gets process's logical pid
@@ -80,6 +91,7 @@ int main(int argc, char * argv[]){
 		// Decides when current time is at or after decision time
 		now = getPTime(systemClock);
 		if (clockCompare(now, decisionTime) >= 0){
+			printTargets(simPid);
 
 	/*		fprintf(stderr, "\n\tP%d - MAKING DECISION AT " \
 				"%03d : %09d\n\n", simPid, now.seconds, 
@@ -105,8 +117,11 @@ int main(int argc, char * argv[]){
 
 		// Waits for response to request
 		if (msgSent){
-			fprintf(stderr, "\n\tP%d WAITING FOR MSG\n\n", simPid);
+			msgSent = false;
+
+			fprintf(stderr, "\n\tP%d WAITING FOR REPLY QMSG\n", simPid);
 			waitForMessage(replyMqId, reply, simPid + 1);
+
 			fprintf(stderr, "\n\tP%d RECEIVED %s\n\n",
 				simPid, reply);
 
@@ -115,7 +130,6 @@ int main(int argc, char * argv[]){
 				terminating = true;
 				//killed = true;
 			}
-			msgSent = false;
 		}
 	}
 

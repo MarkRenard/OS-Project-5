@@ -6,7 +6,7 @@
 #include "constants.h"
 
 // Sets the allocation matrix
-void setAllocated(ResourceDescriptor * resources,
+void setAllocated(const ResourceDescriptor * resources,
                           int * allocated){
         int m = NUM_RESOURCES;
 
@@ -46,7 +46,7 @@ void setRequest(const ResourceDescriptor * resources,
 }
 
 // Sets the available vector
-void setAvailable(ResourceDescriptor * resources,
+void setAvailable(const ResourceDescriptor * resources,
                          int * available) {
         int r;
         for (r = 0; r < NUM_RESOURCES; r++){

@@ -151,6 +151,13 @@ void logKill(int simPid){
 	fprintf(log, "\tKilling process P%d\n", simPid);
 }
 
+// Prints a message indicating that deadlock has been resolved
+void logResolutionSuccess(){
+	if (++lines > MAX_LOG_LINES) return;
+
+	fprintf(log, "\tSystem is not in deadlock\n");
+}
+
 // Prints a message indicating that a process has terminated on its own
 void logCompletion(int simPid){
 	if (++lines > MAX_LOG_LINES) return;
@@ -191,13 +198,13 @@ void logRelease(int * resources, int size){
 }
 
 // Prints table of m resources, n processes
-int printTable(FILE * fp, int * table, int m, int n){
+int printTable(FILE * fp, const int * table, int m, int n){
 	// Prints the table	
 	int r, p;	// resource and process indices
 	int lines = 0;	// Number of lines added
 	
 	// Prints header of resources
-	fprintf(fp, "\n     ");
+	fprintf(fp, "\t     ");
 	for (r = 0; r < m; r++){
 		fprintf(fp, "R%02d ", r);
 	}
@@ -206,7 +213,7 @@ int printTable(FILE * fp, int * table, int m, int n){
 
 	// Prints rows of table
 	for (p = 0; p < n; p++){
-		fprintf(fp, "P%02d: ", p);
+		fprintf(fp, "\tP%02d: ", p);
 
 		// Prints each resource
 		for (r = 0; r < m; r++)
@@ -215,34 +222,36 @@ int printTable(FILE * fp, int * table, int m, int n){
 		fprintf(fp, "\n");
 		lines++;
 	}
-
 	fprintf(fp, "\n");
 	lines++;
 
 	return lines;
 }
 
+// Prints allocated, requested, and available matrices to a file, returns num \n
+int printMatrices(FILE * fp, const int * allocated, const int * request, 
+		  const int * available){
 
-// Prints allocated, requested, and available matrices to a file
-void printMatrices(FILE * fp, int * allocated, int * request, 
-	int * available){
+	// Rare instance where not having a named constant is probably best
+	int addedLines = 6;
 	
-        fprintf(fp, "Allocation matrix:\n");
-        printTable(fp, allocated, NUM_RESOURCES, MAX_RUNNING);
+        fprintf(fp, "\n\tAllocation matrix:\n");
+        addedLines += printTable(fp, allocated, NUM_RESOURCES, MAX_RUNNING);
 
-        fprintf(fp, "Request matrix:\n");
-        printTable(fp, request, NUM_RESOURCES, MAX_RUNNING);
+        fprintf(fp, "\n\tRequest matrix:\n");
+        addedLines += printTable(fp, request, NUM_RESOURCES, MAX_RUNNING);
 
-        fprintf(fp, "Available vector:");
-        printTable(fp, available, NUM_RESOURCES, 1);
+        fprintf(fp, "\n\tAvailable vector:\n");
+	addedLines += printTable(fp, available, NUM_RESOURCES, 1);
+
+	return addedLines;
 }
 
 // Prints a matrix representation of the state of the program to a file
-void printMatrixRep(FILE * fp, ResourceDescriptor * resources){
+int printMatrixRep(FILE * fp, const ResourceDescriptor * resources){
         int allocated[NUM_RESOURCES * MAX_RUNNING];     // Resource allocation
         int request[NUM_RESOURCES * MAX_RUNNING];       // Current requests
         int available[NUM_RESOURCES];                   // Available resources
-
 
         // Initializes vectors
         setAllocated(resources, allocated);
@@ -250,5 +259,21 @@ void printMatrixRep(FILE * fp, ResourceDescriptor * resources){
         setAvailable(resources, available);
 
 	// Prints matrices
-	printMatrices(fp, allocated, request, available);
+	return printMatrices(fp, allocated, request, available);
+}
+
+// Logs a matrix representation of the system state
+void logMatrixRep(const ResourceDescriptor * resources){
+	if (lines > MAX_LOG_LINES) return;
+
+	lines += printMatrixRep(log, resources);
+}
+
+// Logs allocated, requested, and available matrices
+void logMatrices(const int * allocated, const int * request, 
+		 const int * available){
+	if (lines > MAX_LOG_LINES) return;
+
+	lines += printMatrices(log, allocated, request, available);
+
 }

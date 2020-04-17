@@ -35,6 +35,9 @@ void logDeadlockedProcesses(int * deadlockedPids, int size);
 // Prints that a deadlock resolution attempt is being made
 void logResolutionAttempt();
 
+// Prints a message indicating that deadlock has been resolved
+void logResolutionSuccess();
+
 // Prints a message indicating that a process has terminated on its own
 void logCompletion(int simPid);
 
@@ -47,10 +50,19 @@ void logRelease(int * resources, int size);
 // Prints table of m resources, n processes
 int printTable(FILE * fp, int * table, int m, int n);
 
-// Prints a matrix representation of the state of the program to a file
-void printMatrixRep(FILE * fp, ResourceDescriptor * resources);
-
 // Prints allocated, requested, and available matrices to a file
-void printMatrices(FILE* fp, int* allocated, int* requested, int* available); 
+int printMatrices(FILE * fp, const int * allocated, const int * requested,
+		  const int * available); 
+
+// Prints a matrix representation of the state of the program to a file
+int printMatrixRep(FILE * fp, const ResourceDescriptor * resources);
+
+// Logs a matrix representation of the system state
+void logMatrixRep(const ResourceDescriptor * resources);
+
+// Logs allocated, requested, and available matrices
+void logMatrices(const int * allocated, const int * requested,
+                 const int * available);
+
 
 #endif

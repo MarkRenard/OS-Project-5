@@ -8,12 +8,12 @@
 #include "resourceDescriptor.h"
 
 // Sets the allocation matrix
-void setAllocated(ResourceDescriptor * resources, int * allocated);
+void setAllocated(const ResourceDescriptor * resources, int * allocated);
 
 // Sets the request matrix
 void setRequest(const ResourceDescriptor * resources, int * request);
 
 // Sets the available vector
-void setAvailable(ResourceDescriptor * resources, int * available);
+void setAvailable(const ResourceDescriptor * resources, int * available);
 
 #endif

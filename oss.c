@@ -24,6 +24,7 @@
 #include <sys/errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 // Prototypes
@@ -63,7 +64,8 @@ int main(int argc, char * argv[]){
 //	alarm(MAX_SECONDS);	// Limits total execution time
 	openLogFile();		// Opens file written to in logging.c
 
-	srand(BASE_SEED - 1);   // Seeds pseudorandom number generator
+	srand(time(NULL));
+//	srand(BASE_SEED - 1);   // Seeds pseudorandom number generator
 
 	// Creates shared memory region and gets pointers
 	getSharedMemoryPointers(&shm, &systemClock, &resources, &messages, 
@@ -87,7 +89,6 @@ int main(int argc, char * argv[]){
 
 // Generates processes, grants requests, and resolves deadlock in a loop
 void simulateResourceManagement(){
-
 	Clock timeToFork = zeroClock();		 // Time to launch user process 
 	Clock timeToDetect = DETECTION_INTERVAL; // Time to resolve deadlock
 
@@ -97,6 +98,7 @@ void simulateResourceManagement(){
 
 	int running = 0;			// Currently running child count
 	int launched = 0;			// Total children launched
+	int terminated = 0;			// Killed last deadlock res.
 
 	int i = 0, m;				// Loop control variables
 
@@ -145,22 +147,26 @@ void simulateResourceManagement(){
 		if (clockCompare(systemClock->time, timeToDetect) >= 0){
 			logDeadlockDetection(systemClock->time);
 
-			running -= resolveDeadlock(pidArray, resources, 
+			// Resolves deadlock
+			terminated = resolveDeadlock(pidArray, resources, 
 						   messages);
+			if (terminated > 0) processAllQueuedRequests();
+			running -= terminated;
 
+			// Selects new time to detect deadlock
 			incrementClock(&timeToDetect, DETECTION_INTERVAL);
 		}
 
-
+		// Increments and unlocks the system clock
 		incrementClock(&systemClock->time, MAIN_LOOP_INCREMENT);
 		printTimeln(stderr, systemClock->time);
+		pthread_mutex_unlock(&systemClock->sem);
 
 		nanosleep(&SLEEP, NULL);
 
-		// Unlocks the system clock
-		pthread_mutex_unlock(&systemClock->sem);
+	} while ((running > 0 || launched < MAX_LAUNCHED));// && i < 200);
 
-	} while ((running > 0 || launched < MAX_LAUNCHED) && i < 100);
+	fprintf(stderr, "launched %d processes!\n", launched);
 }
 
 // Forks & execs a user process with the assigned logical pid, returns child pid
@@ -287,7 +293,7 @@ static void processRequest(int simPid){
 
 	// Grants request if it is less than available
 	if (msg->quantity <= resources[msg->rNum].numAvailable){
-	grantRequest(msg);
+		grantRequest(msg);
 
 	// Enqueues message otherwise
 	} else {
@@ -302,32 +308,45 @@ static void processRequest(int simPid){
 	}
 }
 
-// Examines request queues and grants old requests for available resources
+// Examines a single request queue and grants old requests if able
 static void processQueuedRequests(int rNum){
 	Message * msg;				// Stores each queued message	
 	Queue * q = &resources[rNum].waiting;	// The queue to process
 	int qCount = q->count;			// Initial number in queue
 
+	fprintf(stderr, "\n\tprocessQueuedRequests(R%d)\n", rNum);
+	fprintf(stderr, "\tqCount: %d\n", qCount);
+
 	int i = 0;
 	for ( ; i < qCount; i++){
+
 		msg = q->front;
+		if (msg == NULL)
+			perrorExit("processQueuedReuqest(%d) - msg NULL");
 
 		// Grants request if possible
-		if (msg->quantity <= resources[rNum].numAvailable){
+		if (msg->quantity > 0 \
+		    && msg->quantity <= resources[rNum].numAvailable){
 
-			fprintf(stderr, "Granting old request from P%d for " \
-				"%d of R%d\n", msg->simPid, msg->quantity,
-				 msg->rNum);
+			fprintf(stderr, "\t");
+			printQueue(stderr, q);
+			fprintf(stderr, "\n\tGranting old request from P%d for " \
+				"%d of R%d when %d available\n", msg->simPid,
+				 msg->quantity, msg->rNum,
+				 resources[rNum].numAvailable);
 
 			grantRequest(msg);
 			dequeue(q);
 
 		// Re-enqueues if not
 		} else {
-			fprintf(stderr, "Can't grant queued request from P%d for " \
+			fprintf(stderr, "\t");
+			printQueue(stderr, q);
+			fprintf(stderr, "\n\tCan't grant queued request from P%d for " \
 				"%d of R%d - only %d available\n", msg->simPid, 
 				msg->quantity, msg->rNum, 
 				resources[rNum].numAvailable);
+
 			dequeue(q);
 			enqueue(q, msg);
 		}
@@ -336,12 +355,15 @@ static void processQueuedRequests(int rNum){
 
 // Grants a request for resources
 static void grantRequest(Message * msg){
-	fprintf(stderr, "Granting P%d request for %d of R%d\n",
-		msg->simPid, msg->quantity, msg->rNum);
-
+	int prev = resources[msg->rNum].numAvailable;
+	
 	// Increeases allocation and decreases availablity
 	resources[msg->rNum].allocations[msg->simPid] += msg->quantity;
 	resources[msg->rNum].numAvailable -= msg->quantity;
+
+	fprintf(stderr, "Granting P%d request for %d of R%d - %d were"
+		" availble, now %d are\n", msg->simPid, msg->quantity, msg->rNum,
+		prev, resources[msg->rNum].numAvailable);
 
 	// Prints granted request to log file
 	logAllocation(msg->simPid, msg->rNum, msg->quantity, 
