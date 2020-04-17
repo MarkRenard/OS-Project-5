@@ -7,7 +7,7 @@
 #include "message.h" // Inlcudes definition of Message
 #include <stdio.h>
 
-typedef struct Queue {
+typedef struct queue {
 	Message * back;
 	Message * front;
 	int count;
@@ -18,6 +18,7 @@ void addToFront(Queue * q, Message * pcb);
 void initializeQueue(Queue *);
 void enqueue(Queue *, Message *);
 Message * dequeue(Queue *);
+void removeFromCurrentQueue(Message *);
 
 #endif
 

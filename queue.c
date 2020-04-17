@@ -1,4 +1,4 @@
-// queue.c was created by Mark Renard on 2/5/2020 and modified on 4/14/2020.
+// queue.c was created by Mark Renard on 2/5/2020 and modified on 4/17/2020.
 // This file defines functions that operate on a queue of messages.
 
 
@@ -26,7 +26,15 @@ void printQueue(FILE * fp, const Queue * q){
 
 // Adds a message to the front of the queue
 void addToFront(Queue * q, Message * msg){
+	if (msg->currentQueue != NULL)
+		perrorExit("addToFront on msg with non-null currentQueue");
+
+	msg->next = NULL;
 	msg->previous = q->front;
+
+	if (msg->previous != NULL)
+		msg->previous->next = msg;
+
 	q->front = msg;
 
 	// Adds to back as well if previously empty
@@ -42,13 +50,21 @@ void enqueue(Queue * q, Message * msg){
 	printQueue(stderr, q);
 	fprintf(stderr, " <- %02d\n", msg->simPid);
 #endif
+	if (msg->currentQueue != NULL)
+		perrorExit("Tried to enqueue msg with non-null currentQueue");
+
+	msg->currentQueue = q;
+
 	// Adds message to queue	
 	if (q->back != NULL){
-		// Adds to previous msg of back if queue is not empty
+
+		// Connects to back of queue if queue is not empty
 		q->back->previous = msg;
+		msg->next = q->back;
 	} else {
 		// Adds to front if queue is empty
 		q->front = msg;
+		msg->next = NULL;
 	}
 	q->back = msg;
 
@@ -72,11 +88,16 @@ Message * dequeue(Queue * q){
 	
 	// Removes the front node from the queue
 	q->front = q->front->previous; // Assigns new front of queue
-	returnVal->previous = NULL; // Removes previous from dequeued block
-		
-	// Sets queue back to null if empty
-	if(q->front == NULL) q->back = NULL;
-	
+	if (q->front != NULL)
+		q->front->next = NULL;	// Front of queue shouldn't have a next
+	else
+		q->back = NULL;	// Back is null if queue is empty
+
+	// Removes links from dequeued element
+	returnVal->previous = NULL; 
+	returnVal->next = NULL;
+	returnVal->currentQueue = NULL;
+
 #ifdef DEBUG_Q
 	fprintf(stderr, "\tdequeue(): %02d <-", returnVal->simPid);
 	printQueue(stderr, q);
@@ -86,7 +107,38 @@ Message * dequeue(Queue * q){
 	q->count--;
 	return returnVal;
 
-
 }
 
+// Removes a particular element from any place in its queue
+void removeFromCurrentQueue(Message * msg){
+	Queue * q = msg->currentQueue;
 
+	if (q == NULL) 
+		perrorExit("Tried to remove msg when not in queue");
+
+	if (q->front == NULL || q->back == NULL || q->count < 1)
+		perrorExit("Tried to remove msg from empty queue");
+
+	// Finds new front if msg is the front
+	if (q->front == msg)
+		q->front = msg->previous;
+
+	// Finds new back if msg is the back
+	if (q->back == msg)
+		q->back = msg->next;
+
+	// Connects previous node to next node
+	if (msg->next != NULL)
+		msg->next->previous = msg->previous;
+
+	// Connects next node to previous node
+	if (msg->previous != NULL)
+		msg->previous->next = msg->next;
+
+	// Sets msg queue pointers to null
+	msg->next = NULL;
+	msg->previous = NULL;
+	msg->currentQueue = NULL;
+	
+	q->count--;
+}

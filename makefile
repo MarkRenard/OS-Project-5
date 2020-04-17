@@ -1,7 +1,7 @@
 OSS	= oss
-OSS_OBJ	= $(COMMON_O) oss.o pidArray.o logging.o queue.o deadlockDetection.o \
+OSS_OBJ	= $(COMMON_O) oss.o pidArray.o logging.o deadlockDetection.o \
 	  matrixRepresentation.o
-OSS_H	= $(COMMON_H) oss.h pidArray.h logging.h queue.h deadlockDetection.h \
+OSS_H	= $(COMMON_H) oss.h pidArray.h logging.h deadlockDetection.h \
 	  matrixRepresentation.o
 
 USER_PROG	= userProgram
@@ -9,9 +9,9 @@ USER_PROG_OBJ	= $(COMMON_O) userProgram.o
 USER_PROG_H	= $(COMMON_H) 
 
 COMMON_O   = $(UTIL_O) getSharedMemoryPointers.o protectedClock.o \
-	     resourceDescriptor.o message.o qMsg.o
+	     resourceDescriptor.o message.o qMsg.o queue.o
 COMMON_H   = $(UTIL_H) getSharedMemoryPointers.h protectedClock.h constants.h \
-	     resourceDescriptor.h message.h qMsg.h
+	     resourceDescriptor.h message.h qMsg.h queue.h
 
 UTIL_O	   = clock.o perrorExit.o randomGen.o sharedMemory.o
 UTIL_H	   = clock.h perrorExit.h randomGen.h sharedMemory.h shmkey.h

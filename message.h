@@ -12,6 +12,8 @@ typedef enum msgType {
 	VOID, TERMINATION, REQUEST, PENDING_REQUEST, RELEASE
 } MsgType;
 
+struct queue;
+
 typedef struct message{
 	int simPid;			// The simPid of the sender
 	
@@ -22,11 +24,18 @@ typedef struct message{
 	int target[NUM_RESOURCES]; 	// Target number of each resource
 	int numClassesHeld;	 	// Number of resource classes held
 
+	// Attributes used in Queue
+	struct queue * currentQueue;		// Queue the message is currently in
+	struct message * next;		// Next message in current queue
 	struct message * previous;	// Previous message in queue
+
 } Message;
 
 void initMessage(Message *, int simPid);
 void initMessageArray(Message *);
+void resetMessage(Message *);
 
+
+#include "queue.h"
 #endif
 

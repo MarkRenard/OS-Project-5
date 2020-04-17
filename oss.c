@@ -37,6 +37,7 @@ static void processQueuedRequests(int rNum);
 static void processAllQueuedRequests();
 static void grantRequest(Message * msg);
 static int parseMessage();
+static void validateState(char * functionName);
 static void assignSignalHandlers();
 static void cleanUpAndExit(int param);
 static void cleanUp();
@@ -164,7 +165,7 @@ void simulateResourceManagement(){
 
 		nanosleep(&SLEEP, NULL);
 
-	} while ((running > 0 || launched < MAX_LAUNCHED));// && i < 200);
+	} while ((running > 0 || launched < MAX_LAUNCHED));// && i < 100);
 
 	fprintf(stderr, "launched %d processes!\n", launched);
 }
@@ -175,7 +176,11 @@ static pid_t launchUserProcess(int simPid){
 	pid_t realPid;
 
 	// Forks, exiting on error
-	if ((realPid = fork()) == -1) perrorExit("Failed to fork");
+	if ((realPid = fork()) == -1){
+		//fprintf(stderr, "Fork error! Quick!\n");
+		//sleep(5);
+		perrorExit("Failed to fork");
+	}
 
 	// Child process calls execl on the user program binary
 	if (realPid == 0){
@@ -250,9 +255,6 @@ static int parseMessage(){
 	}
 }
 
-// Gets message
-// static void parseMessages(Message * messages);
-
 // Responds to a termination event by releasing associated resources
 void processTerm(int simPid, bool killed){
 
@@ -271,7 +273,12 @@ void processTerm(int simPid, bool killed){
 	logRelease(released, NUM_RESOURCES);
 
 	// Resets message
-	initMessage(&messages[simPid], simPid);
+	resetMessage(&messages[simPid]);
+
+	// Validates the state of the simulated system
+	char buff[BUFF_SZ];
+	sprintf(buff, "processTerm(%d), pre kill, ", simPid);
+	validateState(buff);
 
 	// Additional processing when process completed by itself
 	if (!killed){
@@ -281,6 +288,10 @@ void processTerm(int simPid, bool killed){
 			if (released[r] > 0) processQueuedRequests(r);
 		}
 
+		// Validates the state of the simulated system
+		char buff[BUFF_SZ];
+		sprintf(buff, "processTerm(%d), pre kill, ", simPid);
+		validateState(buff);
 
 		// Replies with acknowlegement if the process was not killed
 		sendMessage(replyMqId, "termination confirmed", simPid + 1);
@@ -306,6 +317,11 @@ static void processRequest(int simPid){
 		enqueue(&resources[msg->rNum].waiting, msg);
 		msg->type = PENDING_REQUEST;
 	}
+
+	// Validates the state of the simulated system
+	char buff[BUFF_SZ];
+	sprintf(buff, "processRequest(%d)", simPid);
+	validateState(buff);
 }
 
 // Examines a single request queue and grants old requests if able
@@ -322,11 +338,13 @@ static void processQueuedRequests(int rNum){
 
 		msg = q->front;
 		if (msg == NULL)
-			perrorExit("processQueuedReuqest(%d) - msg NULL");
+			perrorExit("processQueuedReuqest() - msg NULL");
+
+		if (msg->quantity <= 0)
+			perrorExit("processQueuedRequests() - request <= 0");
 
 		// Grants request if possible
-		if (msg->quantity > 0 \
-		    && msg->quantity <= resources[rNum].numAvailable){
+		if (msg->quantity <= resources[rNum].numAvailable){
 
 			fprintf(stderr, "\t");
 			printQueue(stderr, q);
@@ -350,6 +368,12 @@ static void processQueuedRequests(int rNum){
 			dequeue(q);
 			enqueue(q, msg);
 		}
+
+		// Validates the state of the simulated system
+		char buff[BUFF_SZ];
+		sprintf(buff, "processQueuedRequests(%d), iteration %d,", 
+			rNum, i);
+		validateState(buff);
 	}
 }
 
@@ -375,6 +399,12 @@ static void grantRequest(Message * msg){
 	// Resets msg
 	msg->quantity = 0;
 	msg->type = VOID;
+	
+	// Validates the state of the simulated system
+	char buff[BUFF_SZ];
+	sprintf(buff, "grantRequest(msg P%d, %d of R%d)", msg->simPid, 
+		msg->quantity, msg->rNum);
+	validateState(buff);
 
 	// Replies with acknowlegement
 	sendMessage(replyMqId, "request confirmed", msg->simPid + 1);
@@ -403,8 +433,34 @@ static void processRelease(int simPid){
 
 	processAllQueuedRequests();
 
+	// Validates the state of the simulated system
+	char buff[BUFF_SZ];
+	sprintf(buff, "processRelease(%d)", simPid);
+	validateState(buff);
+
 	// Replies with acknowlegement
 	sendMessage(replyMqId, "release confirmed", simPid + 1);
+}
+
+// This function calls perrorExit if any allocation < 0 or allocation > exiting
+static void validateState(char * functionName){
+	int i;
+	char buff[BUFF_SZ];
+
+	for (i = 0; i < NUM_RESOURCES; i++){
+		if (resources[i].numAvailable > resources[i].numInstances){
+			sprintf(buff, "After call to %s, %d of R%d are"\
+				" available, but only %d instances exist",
+				functionName, resources[i].numAvailable, i,
+				resources[i].numInstances);
+			perrorExit(buff);
+		} else if (resources[i].numAvailable < 0) {
+			sprintf(buff, "After call to %s, %d of R%d available",
+				functionName, resources[i].numAvailable, i);
+			perrorExit(buff); 
+		}
+	}
+
 }
 
 // Determines the processes response to ctrl + c or alarm
