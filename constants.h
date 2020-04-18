@@ -12,7 +12,7 @@
 
 
 // Miscelaneous
-#define NUM_RESOURCES 4			// Total number of resource classes
+#define NUM_RESOURCES 4		// Total number of resource classes
 
 #define	MIN_INST 1			// Minimum instances of each resource
 #define MAX_INST 10			// Maximum instances of each resource
