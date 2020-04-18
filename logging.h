@@ -64,5 +64,7 @@ void logMatrixRep(const ResourceDescriptor * resources);
 void logMatrices(const int * allocated, const int * requested,
                  const int * available);
 
+// Prints statistics to the log file at the end of a run
+void logStats();
 
 #endif

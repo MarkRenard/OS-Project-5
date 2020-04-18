@@ -143,6 +143,15 @@ static void updateMatrices(const ResourceDescriptor * resources,
 	initVector(deadlocked, MAX_RUNNING, 0);
 }
 
+// Returns the number of currently running processes
+static int numRunning(pid_t * pidArray){
+	int i = 0, acc = 0;
+	for ( ; i < MAX_RUNNING; i++){
+		if (pidArray[i] != EMPTY) acc++;
+	}
+	return acc;
+}
+
 // Detects and resolves deadlock - returns num killed and removes pids
 int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 		    Message * messages){
@@ -153,27 +162,26 @@ int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 	int request[NUM_RESOURCES * MAX_RUNNING];	// Current requests
 	int available[NUM_RESOURCES];			// Available resources
 
-	int deadlocked[MAX_RUNNING];	// Whether each pid is deadlocked
+	int deadlocked[MAX_RUNNING]; // Whether each pid is deadlocked
 
-	int killed = 0;			// The number of terminated processes
+	int killed = 0;				   // Num terminated processes
+	int runningAtStart = numRunning(pidArray); // Num processes running
 
 	// Initializes vectors
 	updateMatrices(resources, allocated, request, available, deadlocked);
-	
 #ifdef DEBUG
 	printMatrices(stderr, allocated, request, available);
 #endif
 	// If deadlock exists, repeatedly kills processes until resolved
-	bool printed = false;
+	bool deadlockDetected = false;
 	while(deadlock(available, NUM_RESOURCES, MAX_RUNNING, request,
 		       allocated, deadlocked)){
 
 		// Prints resolution message once
-		if (!printed){
+		if (!deadlockDetected){
 			logResolutionAttempt();
-			printed = true;
+			deadlockDetected = true;
 		}
-
 #ifdef DEBUG
 		fprintf(stderr, "\t\t\t\t\t!!!DEADLOCK DETECTED!!!\n");
 #endif
@@ -183,11 +191,11 @@ int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 		// Updates vectors	
 		updateMatrices(resources, allocated, request, available, deadlocked);
 	}
-
 #ifdef DEBUG
 	fprintf(stderr, "End of deadlock resolution. Killed: %d\n", killed);
 #endif
-	logResolutionSuccess();
+	if (deadlockDetected)
+		logResolutionSuccess(killed, runningAtStart);
 
 	return killed;
 }

@@ -1,8 +1,8 @@
 OSS	= oss
 OSS_OBJ	= $(COMMON_O) oss.o pidArray.o logging.o deadlockDetection.o \
-	  matrixRepresentation.o
+	  matrixRepresentation.o stats.o
 OSS_H	= $(COMMON_H) oss.h pidArray.h logging.h deadlockDetection.h \
-	  matrixRepresentation.o
+	  matrixRepresentation.h stats.h
 
 USER_PROG	= userProgram
 USER_PROG_OBJ	= $(COMMON_O) userProgram.o 

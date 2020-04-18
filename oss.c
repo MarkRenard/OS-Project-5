@@ -14,6 +14,7 @@
 #include "qMsg.h"
 #include "queue.h"
 #include "resourceDescriptor.h"
+#include "stats.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -94,6 +95,7 @@ int main(int argc, char * argv[]){
 		((long unsigned int)&resources[NUM_RESOURCES - 1] \
 		- (long unsigned int)resources));
 #endif
+	initStats();
 
 	// Initializes system clock and shared arrays
 	initPClock(systemClock);
@@ -102,6 +104,8 @@ int main(int argc, char * argv[]){
 	
 	// Generates processes, grants requests, and resolves deadlock in a loop
 	simulateResourceManagement();
+
+	logStats();
 
 	cleanUp();
 
@@ -313,9 +317,9 @@ static void processTermination(int simPid, pid_t realPid){
 	// Checks queued requests for released resources, grants if possible
 	processReleasedResourceQueues(released);
 
-#ifdef VERBOSE
 	// Logging
 	logCompletion(simPid);
+#ifdef VERBOSE
 	logRelease(released);
 #endif
 }

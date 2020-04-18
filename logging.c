@@ -8,6 +8,7 @@
 #include "perrorExit.h"
 #include "matrixRepresentation.h"
 #include "resourceDescriptor.h"
+#include "stats.h"
 #include <stdio.h>
 
 static FILE * log = NULL;
@@ -33,12 +34,15 @@ void logRequestDetection(int simPid, int resourceId, int count, Clock time){
 
 // Logs allocation of a resource
 void logAllocation(int simPid, int resourceId, int count, Clock time){
+	statsRequestGranted(); // Records that a resource request was granted
+
 #ifdef VERBOSE
 	if (++lines > MAX_LOG_LINES) return;
 
 	fprintf(log, "Master granted P%d request for %d of R%d at time " \
 		" %03d : %09d\n", simPid, count, resourceId, time.seconds, 
 		time.nanoseconds);
+
 #endif
 }
 
@@ -104,6 +108,8 @@ void logResourceRelease(int simPid, int resourceId, int count, Clock time){
 
 // Prints a line that deadlock detection is being run
 void logDeadlockDetection(Clock time){
+	statsDeadlockDetectionRun(); // Tallies times deadlock detection run
+
 	if (++lines > MAX_LOG_LINES) return;
 
 	fprintf(log, "Master running deadlock detection at time %03d : %09d:" \
@@ -127,27 +133,33 @@ void logDeadlockedProcesses(int * deadlockedPids, int size){
 
 // Prints that a deadlock resolution attempt is being made
 void logResolutionAttempt(){
+	// Prints resolution to log file if 
 	if (++lines > MAX_LOG_LINES) return;
-
 	fprintf(log, "\tAttempting to resolve deadlock...\n");
 }
 
 // Prints a message indicating that a process with logical pid was killed
 void logKill(int simPid){
+	statsProcessKilled();	// Records that a process was killed
+
 	if (++lines > MAX_LOG_LINES) return;
 
 	fprintf(log, "\tKilling process P%d\n", simPid);
 }
 
 // Prints a message indicating that deadlock has been resolved
-void logResolutionSuccess(){
+void logResolutionSuccess(int killed, int runningAtStart){
+	statsDeadlockResolved(killed, runningAtStart);	
+
 	if (++lines > MAX_LOG_LINES) return;
 
-	fprintf(log, "\tSystem is not in deadlock\n");
+	fprintf(log, "\tSystem is no longer deadlocked.\n");
 }
 
 // Prints a message indicating that a process has terminated on its own
 void logCompletion(int simPid){
+	statsProcessCompleted(); // Records that process terminated successfully
+
 #ifdef VERBOSE
 	if (++lines > MAX_LOG_LINES) return;
 
@@ -266,4 +278,21 @@ void logMatrices(const int * allocated, const int * request,
 
 	lines += printMatrices(log, allocated, request, available);
 
+}
+
+// Prints statistics to the log file at the end of a run
+void logStats(){
+	Stats stats = getStats();
+
+	fprintf(log, "\nSTATS:\n" \
+		"Total requests granted: %lu\n" \
+		"Processes terminated by deadlock detection/recovery: %lu\n" \
+		"Processes terminated successfully: %lu\n" \
+		"Times deadlock detection run: %lu\n\n" \
+		"%f percent of processes terminated per deadlock on average.",
+		stats.numRequestsGranted,
+		stats.numProcessesKilled,
+		stats.numProcessesCompleted,
+		stats.numTimesDeadlockDetectionRun,
+		stats.percentKilledPerDeadlock);
 }
