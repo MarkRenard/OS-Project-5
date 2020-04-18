@@ -18,24 +18,6 @@
 #include "randomGen.h"
 #include "sharedMemory.h"
 
-// Prototypes
-static void signalTermination(int simPid);
-static bool requestResources(ResourceDescriptor *, Message *, int);
-static bool releaseResources(ResourceDescriptor *, Message *, int);
-static int getRandomRNum();
-
-// Constants
-static const struct timespec SLEEP = {0, 1000};
-static const Clock MIN_INC = {0, 0};
-static const Clock MAX_INC = {0, 250 * MILLION};
-
-// Static global
-static char * shm;			// Shared memory region pointer
-static int targetHeld[NUM_RESOURCES];	// Number of each resource to be held
-
-static int requestMqId;			// Message queue id of request queue
-static int replyMqId;			// Message queue id of reply queue
-
 #ifdef DEBUG_USER
 static void printTargets(int pid){
 	fprintf(stderr, "\n\tP%d HAS:\n", pid);
@@ -48,6 +30,23 @@ static void printTargets(int pid){
 }
 #endif
 
+// Prototypes
+static void signalTermination(int simPid);
+static bool requestResources(ResourceDescriptor *, Message *, int);
+static bool releaseResources(ResourceDescriptor *, Message *, int);
+static int getRandomRNum();
+static bool aSecondHasPassed(Clock now, Clock startTime);
+
+// Constants
+static const Clock MIN_INC = {0, 0};
+static const Clock MAX_INC = {0, 250 * MILLION};
+static const Clock MIN_RUN_TIME = {1, 0};
+
+// Static global
+static char * shm;			// Shared memory region pointer
+static int targetHeld[NUM_RESOURCES];	// Number of each resource to be held
+static int requestMqId;			// Message queue id of request queue
+static int replyMqId;			// Message queue id of reply queue
 
 int main(int argc, char * argv[]){
 	exeName = argv[0];		// Sets exeName for perrorExit
@@ -62,9 +61,17 @@ int main(int argc, char * argv[]){
 	Clock startTime;		// Time the process started
 	Clock now;			// Temp storage for time
 
-
-
+	// Attatches to shared memory and gets pointers
 	getSharedMemoryPointers(&shm, &systemClock, &resources, &messages, 0);
+
+	// Initializes clocks
+	startTime = getPTime(systemClock);
+	decisionTime = startTime;
+
+	// Gets message queues
+        requestMqId = getMessageQueue(DISPATCH_MQ_KEY, MQ_PERMS | IPC_CREAT);
+        replyMqId = getMessageQueue(REPLY_MQ_KEY, MQ_PERMS | IPC_CREAT);
+	char reply[BUFF_SZ];
 
 #ifdef DEBUG_USER
 	fprintf(stderr, "\n\tPROCESS P%d RUNNING!\n", simPid);
@@ -72,20 +79,9 @@ int main(int argc, char * argv[]){
 	fprintf(stderr, "\tP%d CLOCK: %p\n", simPid, systemClock);
 	fprintf(stderr, "\tP%d RESOURCES: %p\n", simPid, resources);
 	fprintf(stderr, "\tP%d MESSAGES ADDRESS: %p\n\n", simPid, messages);
-*/
-#endif
-
-	// Initializes clocks
-	startTime = getPTime(systemClock);
-	decisionTime = startTime;
-#ifdef DEBUG_USER
-	fprintf(stderr, "\tP%d DECISION TIME - %03d : %09d\n\n",
+*/	fprintf(stderr, "\tP%d DECISION TIME - %03d : %09d\n\n",
 		simPid, decisionTime.seconds, decisionTime.nanoseconds);
 #endif
-	// Gets message queues
-        requestMqId = getMessageQueue(DISPATCH_MQ_KEY, MQ_PERMS | IPC_CREAT);
-        replyMqId = getMessageQueue(REPLY_MQ_KEY, MQ_PERMS | IPC_CREAT);
-	char reply[BUFF_SZ];
 
 	// Repeatedly requests or releases resources or terminates
 	bool terminating = false;
@@ -107,17 +103,24 @@ int main(int argc, char * argv[]){
 					randomTime(MIN_INC, MAX_INC));
 
 			// Decides whether to terminate
-			if (randBinary(TERMINATION_PROBABILITY)){
+			if (aSecondHasPassed(now, startTime) \
+			    && randBinary(TERMINATION_PROBABILITY)){
 				signalTermination(simPid);
 				terminating = true;
 				msgSent = true;
 
 			// Decides whether to request or release resources
 			} else if (randBinary(REQUEST_PROBABILITY)){
-				msgSent = requestResources(resources, messages, simPid);
+				msgSent = requestResources(resources, messages,
+							   simPid);
 			} else {
-				msgSent = releaseResources(resources, messages, simPid);
-			}	
+				msgSent = releaseResources(resources, messages,
+							   simPid);
+			}
+
+			// Increments the protected system clock
+			incrementPClock(systemClock, randomTime(MIN_INC, 
+								MAX_INC));
 		}
 
 		// Waits for response to request
@@ -126,14 +129,12 @@ int main(int argc, char * argv[]){
 #ifdef DEBUG_USER
 			fprintf(stderr, "\n\tP%d WAITING FOR REPLY QMSG\n", simPid);
 #endif
-		
 			waitForMessage(replyMqId, reply, simPid + 1);
 #ifdef DEBUG_USER
 			fprintf(stderr, "\n\tP%d RECEIVED %s\n\n",
 				simPid, reply);
 #endif
 			if (strcmp(reply, KILL_MSG) == 0){
-
 #ifdef DEBUG_USER
 				fprintf(stderr, "\tPROCESS KILLED!!!\n");
 #endif
@@ -204,7 +205,6 @@ static bool requestResources(ResourceDescriptor * resources,
 // Sends a message over a message queue releasing random resources
 static bool releaseResources(ResourceDescriptor * resources,
 			     Message * messages, int simPid){
-
 	char msgBuff[BUFF_SZ];	// Message buffer
 	int rNum;		// Resource index
 	int quantity;		// Actual quantity requested
@@ -260,3 +260,14 @@ static int getRandomRNum(){
 	// Returns the index of the randomly chosen resource
 	return resInd[randInt(0, resourceCount - 1)];
 }
+
+static bool aSecondHasPassed(Clock now, Clock startTime){
+	static bool hasPassed = false;
+
+	if (!hasPassed){
+		Clock diff = clockDiff(now, startTime);
+		hasPassed = (clockCompare(diff, MIN_RUN_TIME) >= 0);
+	}
+
+	return hasPassed;
+}	
