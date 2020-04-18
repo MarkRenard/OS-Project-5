@@ -121,8 +121,9 @@ static void killAProcess(pid_t * pidArray, int * deadlocked,
 
 	// Kills the process
 	killProcess(greediest, pidArray[greediest]);
+#ifdef DEBUG
 	printMatrixRep(stderr, resources);
-	
+#endif
 	// Removes the pid from the array
 	if (pidArray[greediest] == EMPTY) perrorExit("killAProcess - no pid");
 	pidArray[greediest] = EMPTY;
@@ -183,12 +184,12 @@ int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 		updateMatrices(resources, allocated, request, available, deadlocked);
 	}
 
+#ifdef DEBUG
 	fprintf(stderr, "End of deadlock resolution. Killed: %d\n", killed);
-
+#endif
 	logResolutionSuccess();
 
 	return killed;
 }
-
 
 

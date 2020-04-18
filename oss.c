@@ -120,20 +120,22 @@ void simulateResourceManagement(){
 	int running = 0;			// Currently running child count
 	int launched = 0;			// Total children launched
 	int terminated = 0;			// Killed last deadlock res.
-
-	int i = 0, m;				// Loop control variables
-
-	// Launches processes and resolves deadlock until limits reached
-	do {
+	int m;					// Message index
 
 #ifdef DEBUG
-		fprintf(stderr, "\nIteration %d:\n", i++);
+	int i = 0;				// Iteration counter
 #endif
-		printPids(pidArray);
+	// Launches processes and resolves deadlock until limits reached
+	do {
 
 		// Waits for semaphore protecting system clock
 		pthread_mutex_lock(&systemClock->sem);		
 
+#ifdef DEBUG
+		fprintf(stderr, "\nIteration %d:\n", i++);
+		printPids(pidArray);
+		printTimeln(stderr, systemClock->time);
+#endif
 		// Launches user processes at random times
 		if (clockCompare(systemClock->time, timeToFork) >= 0){
 			 
@@ -182,12 +184,12 @@ void simulateResourceManagement(){
 
 		// Increments and unlocks the system clock
 		incrementClock(&systemClock->time, MAIN_LOOP_INCREMENT);
-		printTimeln(stderr, systemClock->time);
+
 		pthread_mutex_unlock(&systemClock->sem);
 
 		nanosleep(&SLEEP, NULL);
 
-	} while ((running > 0 || launched < MAX_LAUNCHED));// && i < 100);
+	} while ((running > 0 || launched < MAX_LAUNCHED));
 
 #ifdef DEBUG
 	fprintf(stderr, "launched %d processes!\n", launched);
@@ -289,9 +291,7 @@ void killProcess(int simPid, pid_t realPid){
 	sendMessage(replyMqId, KILL_MSG, simPid + 1);
 
 	// Releases and records previously held resources, calls waitpid
-	releaseResources(released, simPid);
-	waitForProcess(realPid);
-	resetMessage(&messages[simPid]);
+	finalizeTermination(released, simPid, realPid);
 
 	// Logging
 	logKill(simPid);
@@ -308,23 +308,23 @@ static void processTermination(int simPid, pid_t realPid){
 	sendMessage(replyMqId, "termination confirmed", simPid + 1);
 
 	// Releases and records previously held resources, calls waitpid
-	releaseResources(released, simPid);
-	waitForProcess(realPid);
-#ifdef DEBUG
-	fprintf(stderr, "resetMessage(&messages[%d])\n", simPid);
-#endif
-	resetMessage(&messages[simPid]);
+	finalizeTermination(released, simPid, realPid);
 
 	// Checks queued requests for released resources, grants if possible
 	processReleasedResourceQueues(released);
 
+#ifdef VERBOSE
 	// Logging
 	logCompletion(simPid);
 	logRelease(released);
+#endif
 }
 
 // Releases and records previously held resources, calls waitpid, resets message
 static void finalizeTermination(int * released, int simPid, pid_t realPid){
+#ifdef DEBUG
+	fprintf(stderr, "resetMessage(&messages[%d])\n", simPid);
+#endif
 	releaseResources(released, simPid);
 	waitForProcess(realPid);
 	resetMessage(&messages[simPid]);
@@ -444,8 +444,9 @@ static void processQueuedRequests(int rNum){
 
 // Grants a request for resources
 static void grantRequest(Message * msg){
+#ifdef DEBUG
 	int prev = resources[msg->rNum].numAvailable;
-	
+#endif
 	// Increeases allocation and decreases availablity
 	resources[msg->rNum].allocations[msg->simPid] += msg->quantity;
 	resources[msg->rNum].numAvailable -= msg->quantity;

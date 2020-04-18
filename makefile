@@ -19,8 +19,11 @@ UTIL_H	   = clock.h perrorExit.h randomGen.h sharedMemory.h shmkey.h
 OUTPUT     = $(OSS) $(USER_PROG) 
 OUTPUT_OBJ = $(OSS_OBJ) $(USER_PROG_OBJ)
 CC         = gcc
-FLAGS      = -g -lm -lpthread $(DEBUG) -Wall 
-DEBUG	   = -DDEBUG
+FLAGS      = -g -lm -lpthread $(DEBUG) $(VB) -Wall 
+
+DEBUG	   = #-DDEBUG -DDEBUG_Q -DDEBUG_SHM -DDEBUG_USER
+
+VB	   = #-DVERBOSE
 
 .SUFFIXES: .c .o
 

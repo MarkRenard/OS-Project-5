@@ -21,36 +21,40 @@ void openLogFile(){
 
 // Logs the detection of a resource request
 void logRequestDetection(int simPid, int resourceId, int count, Clock time){
+#ifdef VERBOSE
 	if (++lines > MAX_LOG_LINES) return;
 
 
 	fprintf(log, "Master has detected Process P%d requesting %d of R%d at" \
 		" time %03d : %09d\n", simPid, count, resourceId, 
 		time.seconds, time.nanoseconds);
-
+#endif
 }
 
 // Logs allocation of a resource
 void logAllocation(int simPid, int resourceId, int count, Clock time){
+#ifdef VERBOSE
 	if (++lines > MAX_LOG_LINES) return;
 
 	fprintf(log, "Master granted P%d request for %d of R%d at time " \
 		" %03d : %09d\n", simPid, count, resourceId, time.seconds, 
 		time.nanoseconds);
-
+#endif
 }
 
 // Logs when a request is denied and placed in a queue for a resource
 void logEnqueue(int simPid, int quantity, int rNum, int available){
+#ifdef VERBOSE
 	if (++lines > MAX_LOG_LINES) return;
 
 	fprintf(log, "\tP%d requested %d of R%d but only %d available, " \
 		"enqueueing request\n", simPid, quantity, rNum, available);
-
+#endif
 }
 
 // Prints the resource allocation table every 20 requests by default
 void logTable(ResourceDescriptor * resources){
+#ifdef VERBOSE
 	if (++lines > MAX_LOG_LINES) return;
 	static int callCount = 0;	// Times called since last print
 
@@ -84,16 +88,18 @@ void logTable(ResourceDescriptor * resources){
 
 	fprintf(log, "\n");
 	lines++;
+#endif
 }
 
 // Logs the id and quantity of resources being released at a particular time
 void logResourceRelease(int simPid, int resourceId, int count, Clock time){
+#ifdef VERBOSE
 	if (++lines > MAX_LOG_LINES) return;
 
 	fprintf(log, "Master has acknowledged Process P%d releasing %d of R%d" \
 		" at time %03d : %09d\n", simPid, count, resourceId, 
 		time.seconds, time.nanoseconds);
-
+#endif
 }
 
 // Prints a line that deadlock detection is being run
@@ -142,9 +148,11 @@ void logResolutionSuccess(){
 
 // Prints a message indicating that a process has terminated on its own
 void logCompletion(int simPid){
+#ifdef VERBOSE
 	if (++lines > MAX_LOG_LINES) return;
 
 	fprintf(log, "\tMaster has responded to P%d completing\n", simPid);
+#endif
 }
 
 // Prints the resource class ids and quantity of released resources
