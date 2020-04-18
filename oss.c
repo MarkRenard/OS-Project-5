@@ -581,7 +581,7 @@ static void cleanUpAndExit(int param){
 	exit(1);
 }
 
-// Ignores interrupts, kills child processes, closes files, removes shared mem
+// Kills child processes, closes message queues & files, removes shared mem
 static void cleanUp(){
 	// Handles multiple interrupts by ignoring until exit
 	signal(SIGALRM, SIG_IGN);
@@ -590,6 +590,14 @@ static void cleanUp(){
 
 	// Kills all other processes in the same process group
 	kill(0, SIGQUIT);
+
+	// Destroys semaphore protecting system clock
+	while (pthread_mutex_destroy(&systemClock->sem) != 0 && errno == EBUSY);
+	if (errno == EINVAL){
+		char buff[BUFF_SZ];
+		sprintf(buff, "%s: Error: ", exeName);
+		perror("Attempted to destroy invalid semaphore");
+	}
 
 	// Removes message queues
 	removeMessageQueue(requestMqId);
