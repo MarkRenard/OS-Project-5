@@ -9,8 +9,8 @@
 
 #include <stdio.h>
 
-// Sets the request values to 0
-static void zeroHeld(Message * msg){
+// Sets the request-related field values to 0
+static void zeroFields(Message * msg){
 	msg->type = VOID;
 	msg->quantity = 0;
 
@@ -23,15 +23,11 @@ static void zeroHeld(Message * msg){
 // Initializes a single message to default values
 void initMessage(Message * msg, int simPid){
 
-	// Request paraeters
+	// Sets simPid
 	msg->simPid = simPid;
-	msg->type = VOID;
-	msg->quantity = 0;
 
-	int i = 0;
-	for( ; i < NUM_RESOURCES; i++)
-		msg->target[i] = 0;
-	msg->numClassesHeld = 0;
+	// Sets request field to zero
+	zeroFields(msg);
 
 	// Initializes queue values
 	msg->currentQueue = NULL;
@@ -43,20 +39,24 @@ void initMessage(Message * msg, int simPid){
 void initMessageArray(Message * msgArr){
 	int i;
 	for (i = 0; i < MAX_RUNNING; i++){
+#ifdef DEBUG
 		fprintf(stderr, "Attempting to initialize msg for P%d\n", i);
+#endif
 		initMessage(&msgArr[i], i);
 	}
 }
 
 // Returns a message to its state before it was assigned to a process
 void resetMessage(Message * msg){
-	msg->type = VOID;
+/*	msg->type = VOID;
 	msg->quantity = 0;
 
 	int i = 0;
 	for( ; i < NUM_RESOURCES; i++)
 		msg->target[i] = 0;
 	msg->numClassesHeld = 0;
+*/
+	zeroFields(msg);
 
 	if (msg->currentQueue != NULL)
 		removeFromCurrentQueue(msg);

@@ -36,6 +36,7 @@ static int targetHeld[NUM_RESOURCES];	// Number of each resource to be held
 static int requestMqId;			// Message queue id of request queue
 static int replyMqId;			// Message queue id of reply queue
 
+#ifdef DEBUG_USER
 static void printTargets(int pid){
 	fprintf(stderr, "\n\tP%d HAS:\n", pid);
 
@@ -45,6 +46,7 @@ static void printTargets(int pid){
 	}
 	
 }
+#endif
 
 
 int main(int argc, char * argv[]){
@@ -60,23 +62,26 @@ int main(int argc, char * argv[]){
 	Clock startTime;		// Time the process started
 	Clock now;			// Temp storage for time
 
-	fprintf(stderr, "\n\tPROCESS P%d RUNNING!\n", simPid);
+
 
 	getSharedMemoryPointers(&shm, &systemClock, &resources, &messages, 0);
 
-/*
-	fprintf(stderr, "\tP%d SHM ADDRESS: %p\n", simPid, shm);
+#ifdef DEBUG_USER
+	fprintf(stderr, "\n\tPROCESS P%d RUNNING!\n", simPid);
+/*	fprintf(stderr, "\tP%d SHM ADDRESS: %p\n", simPid, shm);
 	fprintf(stderr, "\tP%d CLOCK: %p\n", simPid, systemClock);
 	fprintf(stderr, "\tP%d RESOURCES: %p\n", simPid, resources);
 	fprintf(stderr, "\tP%d MESSAGES ADDRESS: %p\n\n", simPid, messages);
 */
+#endif
 
 	// Initializes clocks
 	startTime = getPTime(systemClock);
 	decisionTime = startTime;
+#ifdef DEBUG_USER
 	fprintf(stderr, "\tP%d DECISION TIME - %03d : %09d\n\n",
 		simPid, decisionTime.seconds, decisionTime.nanoseconds);
-
+#endif
 	// Gets message queues
         requestMqId = getMessageQueue(DISPATCH_MQ_KEY, MQ_PERMS | IPC_CREAT);
         replyMqId = getMessageQueue(REPLY_MQ_KEY, MQ_PERMS | IPC_CREAT);
@@ -84,25 +89,25 @@ int main(int argc, char * argv[]){
 
 	// Repeatedly requests or releases resources or terminates
 	bool terminating = false;
-//	bool killed = false;
 	bool msgSent = false;	
 	while (!terminating) {
 
 		// Decides when current time is at or after decision time
 		now = getPTime(systemClock);
 		if (clockCompare(now, decisionTime) >= 0){
+#ifdef DEBUG_USER
 			printTargets(simPid);
-
 	/*		fprintf(stderr, "\n\tP%d - MAKING DECISION AT " \
 				"%03d : %09d\n\n", simPid, now.seconds, 
 				now.nanoseconds);
 	*/
+#endif
 			// Updates decision time
 			incrementClock(&decisionTime, 
 					randomTime(MIN_INC, MAX_INC));
 
 			// Decides whether to terminate
-			if (randBinary(TERMINATION_PROBABILITY)){// || killed){
+			if (randBinary(TERMINATION_PROBABILITY)){
 				signalTermination(simPid);
 				terminating = true;
 				msgSent = true;
@@ -118,31 +123,38 @@ int main(int argc, char * argv[]){
 		// Waits for response to request
 		if (msgSent){
 			msgSent = false;
-
+#ifdef DEBUG_USER
 			fprintf(stderr, "\n\tP%d WAITING FOR REPLY QMSG\n", simPid);
+#endif
+		
 			waitForMessage(replyMqId, reply, simPid + 1);
-
+#ifdef DEBUG_USER
 			fprintf(stderr, "\n\tP%d RECEIVED %s\n\n",
 				simPid, reply);
-
+#endif
 			if (strcmp(reply, KILL_MSG) == 0){
+
+#ifdef DEBUG_USER
 				fprintf(stderr, "\tPROCESS KILLED!!!\n");
+#endif
 				terminating = true;
-				//killed = true;
 			}
 		}
 	}
 
 	// Prepares to exit
 	detach(shm);
-	fprintf(stderr, "\n\tPROCESS P%d TERMINATING!\n\n", simPid);
 
+#ifdef DEBUG_USER
+	fprintf(stderr, "\n\tPROCESS P%d TERMINATING!\n\n", simPid);
+#endif
 	return 0;
 }
 
 static void signalTermination(int simPid){
+#ifdef DEBUG_USER
 	fprintf(stderr, "\n\tPROCESS %d SIGNALING TERMINATION\n\n", simPid);
-
+#endif
 	char msgBuff[BUFF_SZ];
 	sprintf(msgBuff, "0");
 	sendMessage(requestMqId, msgBuff, simPid + 1);
@@ -151,9 +163,6 @@ static void signalTermination(int simPid){
 // Sends a message over a message queue requesting random resources
 static bool requestResources(ResourceDescriptor * resources, 
 			     Message * messages, int simPid){
-
-//	fprintf(stderr, "\n\tPROCESS %d - requestResources\n\n", simPid);
-
 	char msgBuff[BUFF_SZ];	// Message buffer
 	int rNum;		// Resource index
 	int maxRequest;		// Max quantity of requested resources
@@ -182,11 +191,12 @@ static bool requestResources(ResourceDescriptor * resources,
 	sprintf(msgBuff, "%d", encoded);
 	sendMessage(requestMqId, msgBuff, simPid + 1);
 
+#ifdef DEBUG_USER
 	fprintf(stderr, "\n\tPROCESS %d REQUESTING %d OF R%d", simPid,
 		quantity, rNum);
 	fprintf(stderr, "\n\tPROCESS %d REQUESTING %d OF R%d", simPid,
 		encoded % (MAX_INST + 1), encoded / (MAX_INST + 1));
-
+#endif
 	return true;
 
 }
@@ -202,8 +212,10 @@ static bool releaseResources(ResourceDescriptor * resources,
 	
 	// Selects a held resource at random or returns if no resources held
 	if ((rNum = getRandomRNum()) == -1){
+#ifdef DEBUG_USER
 		fprintf(stderr, "\n\tPROCESS %d CAN'T RELEASE ANYTHING\n\n",
 			simPid);
+#endif
 		 return false;
 	}
 
@@ -220,11 +232,13 @@ static bool releaseResources(ResourceDescriptor * resources,
 	sprintf(msgBuff, "%d", encoded);
 	sendMessage(requestMqId, msgBuff, simPid + 1);
 
+#ifdef DEBUG_USER
+	// Ensures the encoding worked by printing release in two ways
 	fprintf(stderr, "\n\tPROCESS %d RELEASING %d OF R%d", simPid,
 		quantity, rNum);
 	fprintf(stderr, "\n\tPROCESS %d RELEASING %d OF R%d", simPid,
 		encoded % (MAX_INST + 1), encoded / (MAX_INST + 1));
-
+#endif
 	return true;
 
 }
@@ -246,90 +260,3 @@ static int getRandomRNum(){
 	// Returns the index of the randomly chosen resource
 	return resInd[randInt(0, resourceCount - 1)];
 }
-	
-/*
-	Abandonded Implementation
-
-// Creates a request in shared memory for a random number of a random resource
-static void requestResources(ResourceDescriptor * resources, Message * messages,
-			     int simPid){
-
-	// Randomly selects the resource descriptor of a resource to request
-	int rNum = randInt(0, NUM_RESOURCES - 1);
-
-	// Calculates maximum request quantity
-	int allocated = resources[rNum].allocations[simPid];
-	int maxRequest = resources[rNum].numInstances - allocated;
-
-	// Makes the request if more can be requested
-	if (maxRequest > 0){
-
-		// Increments num classes if no resources of this class held
-		if (messages[simPid].target[rNum] == 0)
-			messages[simPid].numClassesHeld++;
-
-		// Adds a requested number of instances to the target number
-		int numRequested = randInt(1, maxRequest);
-		messages[simPid].quantity = numRequested;
-		messages[simPid].target[rNum] += numRequested;
-		messages[simPid].rNum = rNum;
-
-		fprintf(stderr, "\n\tPROCESS %d REQUESTING %d OF R%d\n",
-			simPid, numRequested, rNum);
-
-		messages[simPid].type = REQUEST;
-		fprintf(stderr, "\tMSG[%d].TYPE: %d ADDRESS: %p\n\n", 
-			simPid, messages[simPid].type, &(messages[simPid].type));
-	}
-
-}
-
-// Sends message to release a random number of a random resource
-static void releaseResources(ResourceDescriptor * resources, Message * messages,
-			     int simPid){
-
-	// Returns if no resources are held
-	if (messages[simPid].numClassesHeld == 0) return;
-
-	// Selects the index of a held resource randomly
-	int rNum = selectResourceIndex(&messages[simPid], simPid);
-
-	// Constructs message to release a random number of the chosen resource
-	int numHeld = messages[simPid].target[rNum];
-	int numReleased = randInt(1, numHeld);
-	messages[simPid].quantity = numReleased;
-	messages[simPid].target[rNum] -= numReleased;
-	messages[simPid].rNum = rNum;
-
-	// Decrements num classes if no resources of this class will be held
-	if (messages[simPid].target[rNum] == 0)
-		messages[simPid].numClassesHeld--;
-
-	fprintf(stderr, "\n\tPROCESS %d RELEASING %d OF R%d\n\n",
-		simPid, numReleased, rNum);
-
-	messages[simPid].type = RELEASE;
-
-}
-
-// Randomly selects the index of a currently held resource in the request
-static int selectResourceIndex(const Message * msg, int simPid){
-
-	// Selects which held resource to release
-	int classNum = randInt(1, msg->numClassesHeld);
-
-	// Finds the rNum of that resource by checking held resource classes 
-	int rNum = 0, checked = 0;
-	for ( ; rNum < NUM_RESOURCES; rNum++){
-
-		// Increments checked if resource at current rNum is held
-		if (msg->target[rNum] != 0){
-			checked++;		
-
-			// Breaks if classNum reached
-			if (checked == classNum) break;
-		}
-	}
-
-	return rNum;
-} */

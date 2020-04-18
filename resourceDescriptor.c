@@ -19,6 +19,7 @@ void initResources(ResourceDescriptor * descriptors){
 
 	}
 
+#ifdef DEBUG
 	// Prints to stderr
 	for (i = 0; i < NUM_RESOURCES; i++){
 		fprintf(stderr, "R%d - share: %d numInstances: %d "\
@@ -28,4 +29,5 @@ void initResources(ResourceDescriptor * descriptors){
 			descriptors[i].numInstances,
 			descriptors[i].numAvailable);
 	}
+#endif
 }

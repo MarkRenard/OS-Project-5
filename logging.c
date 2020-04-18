@@ -96,24 +96,6 @@ void logResourceRelease(int simPid, int resourceId, int count, Clock time){
 
 }
 
-/*
-void logSystemResources(int * allocation, pid_t pidArray){
-	int i, j;	
-
-	// Prints a row of column headers
-	fprintf(log, "   ")
-	for (i = 0; i < NUM_RESOURCES; i++){
-		fprintf(log, "R%d ", i);
-	}
-	fprintf(log, "\n");
-	lines++;
-
-	// Prints resources allocated for each process
-	for (i = 0; i < MAX_RUNNING; i++){
-
-}
-*/
-
 // Prints a line that deadlock detection is being run
 void logDeadlockDetection(Clock time){
 	if (++lines > MAX_LOG_LINES) return;

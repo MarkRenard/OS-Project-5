@@ -1,6 +1,5 @@
 #include <pthread.h>
 
-
 #include "clock.h"
 #include "protectedClock.h"
 

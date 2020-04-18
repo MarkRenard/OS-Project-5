@@ -81,6 +81,7 @@ int main(int argc, char * argv[]){
         requestMqId = getMessageQueue(DISPATCH_MQ_KEY, MQ_PERMS | IPC_CREAT);
         replyMqId = getMessageQueue(REPLY_MQ_KEY, MQ_PERMS | IPC_CREAT);
 
+#ifdef DEBUG
 	fprintf(stderr, "sizeof(*systemClock): %lu\n", sizeof(*systemClock));
 	fprintf(stderr, "sizeof(*resources): %lu\n", sizeof(*resources));
 	fprintf(stderr, "sizeof(*messages): %lu\n\n", sizeof(*messages));
@@ -92,6 +93,7 @@ int main(int argc, char * argv[]){
 	fprintf(stderr, "&resources[NUM_RESOURCES - 1] - resources: %lu\n\n",
 		((long unsigned int)&resources[NUM_RESOURCES - 1] \
 		- (long unsigned int)resources));
+#endif
 
 	// Initializes system clock and shared arrays
 	initPClock(systemClock);
@@ -124,7 +126,9 @@ void simulateResourceManagement(){
 	// Launches processes and resolves deadlock until limits reached
 	do {
 
+#ifdef DEBUG
 		fprintf(stderr, "\nIteration %d:\n", i++);
+#endif
 		printPids(pidArray);
 
 		// Waits for semaphore protecting system clock
@@ -185,7 +189,10 @@ void simulateResourceManagement(){
 
 	} while ((running > 0 || launched < MAX_LAUNCHED));// && i < 100);
 
+#ifdef DEBUG
 	fprintf(stderr, "launched %d processes!\n", launched);
+#endif
+
 }
 
 // Forks & execs a user process with the assigned logical pid, returns child pid
@@ -207,9 +214,10 @@ static pid_t launchUserProcess(int simPid){
 		perrorExit("Failed to execl");
 	}
 
+#ifdef DEBUG
 	fprintf(stderr, "launchUserProcess(%d) called - real pid: %d\n", 
 		simPid, realPid);
-
+#endif
 	return realPid;
 
 }
@@ -233,9 +241,10 @@ static int parseMessage(){
 			quantity = -msgInt % (MAX_INST + 1);
 			rNum = -msgInt / (MAX_INST + 1);
 			messages[simPid].type = RELEASE;
-
+#ifdef DEBUG
 			fprintf(stderr, "Receiving that P%d released %d of R%d\n",
 				simPid, quantity, rNum);
+#endif
 
 		// Parses request messages
 		} else if (msgInt > 0){
@@ -245,18 +254,18 @@ static int parseMessage(){
 
 			logRequestDetection(simPid, rNum, quantity, 
 					    systemClock->time);
-
+#ifdef DEBUG
 			fprintf(stderr, "Receiving that P%d requested %d of R%d\n",
 				simPid, quantity, rNum);
+#endif
 
 		// Parses termination messages
 		} else {
 			messages[simPid].type = TERMINATION;
-
+#ifdef DEBUG
 			fprintf(stderr, "Receiving that P%d terminated\n",
 				simPid);
-
-			logCompletion(simPid);
+#endif
 
 			return simPid;
 		}
@@ -291,8 +300,9 @@ void killProcess(int simPid, pid_t realPid){
 
 // Releases resources of a finished process, waits, checks queues, writes to log
 static void processTermination(int simPid, pid_t realPid){
+#ifdef DEBUG
 	fprintf(stderr, "processTermination(%d, %d)\n", simPid, realPid);
-
+#endif
 	int released[NUM_RESOURCES]; // Array of prevous resource allocations
 
 	sendMessage(replyMqId, "termination confirmed", simPid + 1);
@@ -300,8 +310,9 @@ static void processTermination(int simPid, pid_t realPid){
 	// Releases and records previously held resources, calls waitpid
 	releaseResources(released, simPid);
 	waitForProcess(realPid);
-
+#ifdef DEBUG
 	fprintf(stderr, "resetMessage(&messages[%d])\n", simPid);
+#endif
 	resetMessage(&messages[simPid]);
 
 	// Checks queued requests for released resources, grants if possible
@@ -336,8 +347,9 @@ static void releaseResources(int * released, int simPid){
 
 // Waits for the process with pid equal to the realPid parameter
 static void waitForProcess(pid_t realPid){
+#ifdef DEBUG
 	fprintf(stderr, "waitForProcess(%d)", realPid);
-
+#endif
         pid_t retval;
         while(((retval = waitpid(realPid, NULL, 0)) == -1)
                  && errno == EINTR);
@@ -345,60 +357,6 @@ static void waitForProcess(pid_t realPid){
         if (errno == ECHILD)
                 perrorExit("waited for non-existent child");
 }
-
-// Responds to a termination event by releasing associated resources and waiting
-/*
-void processTerm(int simPid, pid_t realPid){
-
-	fprintf(stderr, "Responding to termination of process %d\n", simPid);
-
-	int released[NUM_RESOURCES];
-
-	// Frees all resources previously allocated to the process
-	int r;
-	for (r = 0; r < NUM_RESOURCES; r++){
-		released[r] = resources[r].allocations[simPid];
-		resources[r].numAvailable += resources[r].allocations[simPid];
-		resources[r].allocations[simPid] = 0;
-	}
-
-	logRelease(released);
-
-	// Resets message
-	resetMessage(&messages[simPid]);
-
-	// Validates the state of the simulated system
-	char buff[BUFF_SZ];
-	sprintf(buff, "processTerm(%d), pre kill, ", simPid);
-	validateState(buff);
-
-	// Waits for the process
-        pid_t retval;
-        while(((retval = waitpid(realPid, NULL, 0)) == -1)
-                 && errno == EINTR);
-
-        if (errno == ECHILD)
-                perrorExit("processTerm - waited for non-existent child");
-
-
-	// Additional processing when process completed by itself
-	if (!killed){
-
-		// Processes old requests for released resources
-		for (r = 0; r < NUM_RESOURCES; r++){
-			if (released[r] > 0) processQueuedRequests(r);
-		}
-
-		// Validates the state of the simulated system
-		char buff[BUFF_SZ];
-		sprintf(buff, "processTerm(%d), pre kill, ", simPid);
-		validateState(buff);
-
-		// Replies with acknowlegement if the process was not killed
-		sendMessage(replyMqId, "termination confirmed", simPid + 1);
-	}
-}
-*/
 
 // Responds to a request for resources by granting it or enqueueing the request
 static void processRequest(int simPid){
@@ -410,9 +368,12 @@ static void processRequest(int simPid){
 
 	// Enqueues message otherwise
 	} else {
-		// Logs request denial
+#ifdef DEBUG
 		fprintf(stderr, "Can't meet P%d request for %d of R%d, in q\n",
 			simPid, msg->quantity, msg->rNum);
+#endif
+
+		// Logs request denial
 		logEnqueue(simPid, msg->quantity, msg->rNum, 
 			resources[msg->rNum].numAvailable);
 
@@ -432,9 +393,10 @@ static void processQueuedRequests(int rNum){
 	Queue * q = &resources[rNum].waiting;	// The queue to process
 	int qCount = q->count;			// Initial number in queue
 
+#ifdef DEBUG
 	fprintf(stderr, "\n\tprocessQueuedRequests(R%d)\n", rNum);
 	fprintf(stderr, "\tqCount: %d\n", qCount);
-
+#endif
 	int i = 0;
 	for ( ; i < qCount; i++){
 
@@ -447,26 +409,27 @@ static void processQueuedRequests(int rNum){
 
 		// Grants request if possible
 		if (msg->quantity <= resources[rNum].numAvailable){
-
+#ifdef DEBUG
 			fprintf(stderr, "\t");
 			printQueue(stderr, q);
 			fprintf(stderr, "\n\tGranting old request from P%d for " \
 				"%d of R%d when %d available\n", msg->simPid,
 				 msg->quantity, msg->rNum,
 				 resources[rNum].numAvailable);
-
+#endif
 			grantRequest(msg);
 			dequeue(q);
 
 		// Re-enqueues if not
 		} else {
+#ifdef DEBUG
 			fprintf(stderr, "\t");
 			printQueue(stderr, q);
 			fprintf(stderr, "\n\tCan't grant queued request from P%d for " \
 				"%d of R%d - only %d available\n", msg->simPid, 
 				msg->quantity, msg->rNum, 
 				resources[rNum].numAvailable);
-
+#endif
 			dequeue(q);
 			enqueue(q, msg);
 		}
@@ -487,10 +450,11 @@ static void grantRequest(Message * msg){
 	resources[msg->rNum].allocations[msg->simPid] += msg->quantity;
 	resources[msg->rNum].numAvailable -= msg->quantity;
 
+#ifdef DEBUG
 	fprintf(stderr, "Granting P%d request for %d of R%d - %d were"
 		" availble, now %d are\n", msg->simPid, msg->quantity, msg->rNum,
 		prev, resources[msg->rNum].numAvailable);
-
+#endif
 	// Prints granted request to log file
 	logAllocation(msg->simPid, msg->rNum, msg->quantity, 
 		      systemClock->time);
@@ -570,7 +534,6 @@ static void validateState(char * functionName){
 			perrorExit(buff); 
 		}
 	}
-
 }
 
 // Determines the processes response to ctrl + c or alarm

@@ -35,7 +35,6 @@ void initMessage(Message *, int simPid);
 void initMessageArray(Message *);
 void resetMessage(Message *);
 
-
 #include "queue.h"
 #endif
 

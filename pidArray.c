@@ -23,22 +23,6 @@ int getLogicalPid(const pid_t * pidArray){
 	for( ; i < MAX_RUNNING; i++)
 		if (pidArray[i] == EMPTY) return i;
 
-	/*
-	static int lastChosen = -1;
-
-	int i = lastChosen + 1;
-	for( ; i != lastChosen; i++){
-
-		// Wraps to 0 if MAX_RUNNING reached
-		if (i == MAX_RUNNING) i = 0;
-
-		// Selects current index if pid is free
-		if (pidArray[i] == EMPTY){
-			lastChosen = i;
-			return i;
-		}
-	}
-*/
 	perrorExit("getLogicalPid called with no free pids");
 
 	return 0;

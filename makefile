@@ -20,7 +20,7 @@ OUTPUT     = $(OSS) $(USER_PROG)
 OUTPUT_OBJ = $(OSS_OBJ) $(USER_PROG_OBJ)
 CC         = gcc
 FLAGS      = -g -lm -lpthread $(DEBUG) -Wall 
-DEBUG	   = -DDEBUG_Q
+DEBUG	   = -DDEBUG
 
 .SUFFIXES: .c .o
 

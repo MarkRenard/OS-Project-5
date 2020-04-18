@@ -8,6 +8,7 @@
 #include "perrorExit.h"
 #include <stdio.h>
 
+// Sets the values of pointers to null and count to 0
 void initializeQueue(Queue * qPtr){
 	qPtr->front = NULL;
 	qPtr->back = NULL;
