@@ -14,7 +14,7 @@ void initResources(ResourceDescriptor * descriptors){
 		descriptors[i].numInstances = randInt(MIN_INST, MAX_INST);
 		descriptors[i].numAvailable = descriptors[i].numInstances;
 		
-		for(j = 0; j < MAX_LAUNCHED; j++)
+		for(j = 0; j < MAX_RUNNING; j++)
 			descriptors[i].allocations[j] = 0;
 
 	}

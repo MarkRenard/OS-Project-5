@@ -84,15 +84,7 @@ int main(int argc, char * argv[]){
 	fprintf(stderr, "sizeof(*systemClock): %lu\n", sizeof(*systemClock));
 	fprintf(stderr, "sizeof(*resources): %lu\n", sizeof(*resources));
 	fprintf(stderr, "sizeof(*messages): %lu\n\n", sizeof(*messages));
-
-	fprintf(stderr, "address of systemClock: %p\n", systemClock);
-	fprintf(stderr, "address of resources: %p\n", resources);
-	fprintf(stderr, "address of messages: %p\n\n", messages);
-
-	fprintf(stderr, "address of systemClock: %lu\n", (long unsigned int)systemClock);
-	fprintf(stderr, "address of resources: %lu\n", (long unsigned int)resources);
-	fprintf(stderr, "address of messages: %lu\n\n", (long unsigned int)messages);
-
+	
 	fprintf(stderr, "resources - systemClock: %lu\n", 
 		((long unsigned int)resources - (long unsigned int)systemClock));
 	fprintf(stderr, "messages - resources: %lu\n", 
@@ -107,7 +99,7 @@ int main(int argc, char * argv[]){
 	initMessageArray(messages);
 	
 	// Generates processes, grants requests, and resolves deadlock in a loop
-	//simulateResourceManagement();
+	simulateResourceManagement();
 
 	cleanUp();
 

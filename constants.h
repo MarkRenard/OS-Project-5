@@ -29,7 +29,7 @@
 
 // Used by oss.c
 #define MAX_RUNNING 5	 		// Max number of running child processes
-#define MAX_LAUNCHED 100		// Max total children launched
+#define MAX_LAUNCHED 2000		// Max total children launched
 
 #define SHAREABLE_PROBABILITY 0.2	// Chance resource will be shareable
 
