@@ -6,7 +6,10 @@
 #ifndef OSS_H
 #define OSS_H
 
+#include <sys/types.h>
+
 int replyMqId;
 void processTerm(int simPid, bool killed);
+void killProcess(int simPid, pid_t realPid);
 
 #endif

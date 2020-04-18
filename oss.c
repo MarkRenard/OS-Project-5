@@ -30,13 +30,19 @@
 // Prototypes
 static void simulateResourceManagement();
 static pid_t launchUserProcess(int simPid);
-void processTerm(int, bool killed);
-static void processRequest(int);
+static int parseMessage();
+void killProcess(int simPid, pid_t realPid);
+static void processTermination(int simPid, pid_t realPid);
+static void finalizeTermination(int * released, int simPid, pid_t realPid);
+static void releaseResources(int * released, int simPid);
+static void waitForProcess(pid_t realPid);
+//void processTerm(int, bool killed);
+static void processRequest(int simPid);
 static void processRelease(int);
 static void processQueuedRequests(int rNum);
 static void processAllQueuedRequests();
+static void processReleasedResourceQueues(int * released);
 static void grantRequest(Message * msg);
-static int parseMessage();
 static void validateState(char * functionName);
 static void assignSignalHandlers();
 static void cleanUpAndExit(int param);
@@ -71,6 +77,7 @@ int main(int argc, char * argv[]){
 	// Creates shared memory region and gets pointers
 	getSharedMemoryPointers(&shm, &systemClock, &resources, &messages, 
 				IPC_CREAT);
+
         // Creates message queues
         requestMqId = getMessageQueue(DISPATCH_MQ_KEY, MQ_PERMS | IPC_CREAT);
         replyMqId = getMessageQueue(REPLY_MQ_KEY, MQ_PERMS | IPC_CREAT);
@@ -136,7 +143,7 @@ void simulateResourceManagement(){
 			} else if (messages[m].type == RELEASE) {
 				processRelease(m);
 			} else if (messages[m].type == TERMINATION){
-				processTerm(m, false);
+				processTermination(m, pidArray[m]);
 			
 				// Removes from running processes
 				pidArray[m] = EMPTY;
@@ -177,8 +184,6 @@ static pid_t launchUserProcess(int simPid){
 
 	// Forks, exiting on error
 	if ((realPid = fork()) == -1){
-		//fprintf(stderr, "Fork error! Quick!\n");
-		//sleep(5);
 		perrorExit("Failed to fork");
 	}
 
@@ -190,7 +195,6 @@ static pid_t launchUserProcess(int simPid){
 		execl(USER_PROG_PATH, USER_PROG_PATH, sPid, NULL);
 		perrorExit("Failed to execl");
 	}
-
 
 	fprintf(stderr, "launchUserProcess(%d) called - real pid: %d\n", 
 		simPid, realPid);
@@ -246,17 +250,94 @@ static int parseMessage(){
 			return simPid;
 		}
 
+		// Sets values in shared array
 		messages[simPid].quantity = quantity;
 		messages[simPid].rNum = rNum;
 
 		return simPid;
 	}else{
+		// Returns -1 if no messages found in message queue
 		return -1;
 	}
 }
 
-// Responds to a termination event by releasing associated resources
-void processTerm(int simPid, bool killed){
+// Messages a program to terminate, releases its resources, and writes to log
+void killProcess(int simPid, pid_t realPid){
+	int released[NUM_RESOURCES]; // Array of prevous resource allocations
+	
+	// Sends the message killing the process
+	sendMessage(replyMqId, KILL_MSG, simPid + 1);
+
+	// Releases and records previously held resources, calls waitpid
+	releaseResources(released, simPid);
+	waitForProcess(realPid);
+	resetMessage(&messages[simPid]);
+
+	// Logging
+	logKill(simPid);
+	logRelease(released);
+}
+
+// Releases resources of a finished process, waits, checks queues, writes to log
+static void processTermination(int simPid, pid_t realPid){
+	fprintf(stderr, "processTermination(%d, %d)\n", simPid, realPid);
+
+	int released[NUM_RESOURCES]; // Array of prevous resource allocations
+
+	sendMessage(replyMqId, "termination confirmed", simPid + 1);
+
+	// Releases and records previously held resources, calls waitpid
+	releaseResources(released, simPid);
+	waitForProcess(realPid);
+
+	fprintf(stderr, "resetMessage(&messages[%d])\n", simPid);
+	resetMessage(&messages[simPid]);
+
+	// Checks queued requests for released resources, grants if possible
+	processReleasedResourceQueues(released);
+
+	// Logging
+	logCompletion(simPid);
+	logRelease(released);
+}
+
+// Releases and records previously held resources, calls waitpid, resets message
+static void finalizeTermination(int * released, int simPid, pid_t realPid){
+	releaseResources(released, simPid);
+	waitForProcess(realPid);
+	resetMessage(&messages[simPid]);
+
+	// Validates the state of the simulated system
+	char buff[BUFF_SZ];
+	sprintf(buff, "finalizeTermination on proces %d", simPid);
+	validateState(buff);
+}
+
+// Counts resources previously held by the process as available, writes to array
+static void releaseResources(int * released, int simPid){
+	int r;
+	for (r = 0; r < NUM_RESOURCES; r++){
+		released[r] = resources[r].allocations[simPid];
+		resources[r].numAvailable += resources[r].allocations[simPid];
+		resources[r].allocations[simPid] = 0;
+	}
+}
+
+// Waits for the process with pid equal to the realPid parameter
+static void waitForProcess(pid_t realPid){
+	fprintf(stderr, "waitForProcess(%d)", realPid);
+
+        pid_t retval;
+        while(((retval = waitpid(realPid, NULL, 0)) == -1)
+                 && errno == EINTR);
+
+        if (errno == ECHILD)
+                perrorExit("waited for non-existent child");
+}
+
+// Responds to a termination event by releasing associated resources and waiting
+/*
+void processTerm(int simPid, pid_t realPid){
 
 	fprintf(stderr, "Responding to termination of process %d\n", simPid);
 
@@ -270,7 +351,7 @@ void processTerm(int simPid, bool killed){
 		resources[r].allocations[simPid] = 0;
 	}
 
-	logRelease(released, NUM_RESOURCES);
+	logRelease(released);
 
 	// Resets message
 	resetMessage(&messages[simPid]);
@@ -279,6 +360,15 @@ void processTerm(int simPid, bool killed){
 	char buff[BUFF_SZ];
 	sprintf(buff, "processTerm(%d), pre kill, ", simPid);
 	validateState(buff);
+
+	// Waits for the process
+        pid_t retval;
+        while(((retval = waitpid(realPid, NULL, 0)) == -1)
+                 && errno == EINTR);
+
+        if (errno == ECHILD)
+                perrorExit("processTerm - waited for non-existent child");
+
 
 	// Additional processing when process completed by itself
 	if (!killed){
@@ -297,6 +387,7 @@ void processTerm(int simPid, bool killed){
 		sendMessage(replyMqId, "termination confirmed", simPid + 1);
 	}
 }
+*/
 
 // Responds to a request for resources by granting it or enqueueing the request
 static void processRequest(int simPid){
@@ -415,6 +506,14 @@ static void processAllQueuedRequests(){
 	int i = 0;
 	for ( ; i < NUM_RESOURCES; i++){
 		processQueuedRequests(i);
+	}
+}
+
+// Calls processQueuedRequest on resources in released vector
+static void processReleasedResourceQueues(int * released){
+	int i = 0;
+	for ( ; i < NUM_RESOURCES; i++){
+		if (released[i] > 0) processQueuedRequests(i);
 	}
 }
 

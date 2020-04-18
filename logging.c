@@ -166,7 +166,7 @@ void logCompletion(int simPid){
 }
 
 // Prints the resource class ids and quantity of released resources
-void logRelease(int * resources, int size){
+void logRelease(int * resources){
 	int released[NUM_RESOURCES];	// Number of each resource reached
 	int indices[NUM_RESOURCES];	// Index of each resource
 

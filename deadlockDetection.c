@@ -165,10 +165,9 @@ static void killAProcess(pid_t * pidArray, int * deadlocked,
 	}
 
 	// Kills the process
-	logKill(greediest);
-	processTerm(greediest, true);
+	killProcess(greediest, pidArray[greediest]);
 	printMatrixRep(stderr, resources);
-	sendMessage(replyMqId, "kill", greediest + 1);
+/*	sendMessage(replyMqId, "kill", greediest + 1);
 	
 	// Waits for the process
 	pid_t retval;
@@ -177,7 +176,7 @@ static void killAProcess(pid_t * pidArray, int * deadlocked,
 
 	if (errno == ECHILD) 
 		perrorExit("killAProcess - waited for non-existent child");
-	
+*/	
 	// Removes the pid from the array
 	if (pidArray[greediest] == EMPTY) perrorExit("killAProcess - no pid");
 	pidArray[greediest] = EMPTY;

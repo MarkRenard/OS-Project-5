@@ -125,7 +125,7 @@ int main(int argc, char * argv[]){
 			fprintf(stderr, "\n\tP%d RECEIVED %s\n\n",
 				simPid, reply);
 
-			if (strcmp(reply, "kill") == 0){
+			if (strcmp(reply, KILL_MSG) == 0){
 				fprintf(stderr, "\tPROCESS KILLED!!!\n");
 				terminating = true;
 				//killed = true;

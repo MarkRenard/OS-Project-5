@@ -68,6 +68,8 @@
 
 #define BASE_SEED 8853984		// Used in calls to srand
 
+#define KILL_MSG "k"			// Message oss uses to kill processes
+
 #define TERMINATION_CH 't'		// Indicates process termination
 #define USES_ALL_QUANTUM_CH 'u'		// Indicates process used entire quantum
 #define WAITING_FOR_IO_CH 'w'		// Indicates process is waiting for I/O

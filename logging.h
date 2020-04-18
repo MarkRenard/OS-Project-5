@@ -45,7 +45,7 @@ void logCompletion(int simPid);
 void logKill(int simPid);
 
 // Prints the resource class ids and count of released resources
-void logRelease(int * resources, int size);
+void logRelease(int * resources);
 
 // Prints table of m resources, n processes
 int printTable(FILE * fp, int * table, int m, int n);
