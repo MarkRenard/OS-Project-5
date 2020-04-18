@@ -16,6 +16,7 @@ Clock zeroClock(){
 	return clock;
 }
 
+// Returns a clock with passed values of seconds and nanoseconds
 Clock newClock(unsigned int seconds, unsigned int nanoseconds){
 	Clock clock = {seconds, nanoseconds};
 	return clock;
@@ -119,40 +120,6 @@ long double clockRatio(Clock t1, Clock t2){
 
 	return (long double)t1TotalNano / (long double)t2TotalNano;
 }
-
-// Returns the quotient t1 / t2
-Clock clockQuotient(Clock t1, Clock t2){
-	long double ratio = clockRatio(t1, t2);
-	t1.seconds *= ratio;
-	t1.nanoseconds *= ratio;
-
-	return t1;
-}
-
-// Returns a time divided by an integer
-Clock clockDiv(Clock time, int divisor){
-	Clock result;
-	unsigned long long int totalNano;
-	unsigned long long int nanoResult;
-	long double nanoResultDouble;
-
-	totalNano = time.seconds * BILLION + time.nanoseconds;
-	nanoResultDouble = (long double) totalNano / (long double) divisor;
-	nanoResult = (unsigned long long int) nanoResultDouble;
-
-	result.seconds = nanoResult / BILLION;
-	result.nanoseconds = nanoResult % BILLION;
-	
-	
-//	result.seconds = (unsigned int)((double)time.seconds / (double)divisor);
-//	result.nanoseconds = (unsigned int)( (double)time.nanoseconds /(double)divisor);
-//	result.nanoseconds += (time.seconds % divisor) * BILLION;
-
-//	carry(&result);
-
-	return result;
-}
-
 
 // Formats and prints the time on the clock to the file
 void printTime(FILE * fp, const Clock clock){

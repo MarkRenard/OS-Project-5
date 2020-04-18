@@ -36,7 +36,6 @@ static void processTermination(int simPid, pid_t realPid);
 static void finalizeTermination(int * released, int simPid, pid_t realPid);
 static void releaseResources(int * released, int simPid);
 static void waitForProcess(pid_t realPid);
-//void processTerm(int, bool killed);
 static void processRequest(int simPid);
 static void processRelease(int);
 static void processQueuedRequests(int rNum);

@@ -1,4 +1,4 @@
-// clock.h was created by Mark Renard on 2/21/2020 and modified on 3/26/2020
+// clock.h was created by Mark Renard on 2/21/2020 and modified on 4/17/2020.
 //
 // This file defines a type used to simulate a clock in a shared memory region.
 
@@ -22,8 +22,6 @@ int clockCompare(const Clock clk1, const Clock clk2);
 Clock clockSum(Clock t1, Clock t2);
 Clock clockDiff(Clock t1, Clock t2);
 long double clockRatio(Clock t1, Clock t2);
-Clock clockQuotient(Clock t1, Clock t2);
-Clock clockDiv(Clock time, int divisor);
 void printTime(FILE * fp, const Clock clock);
 void printTimeln(FILE * fp, const Clock clock);
 
