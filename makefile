@@ -21,9 +21,8 @@ OUTPUT_OBJ = $(OSS_OBJ) $(USER_PROG_OBJ)
 CC         = gcc
 FLAGS      = -g -lm -lpthread $(DEBUG) $(VB) -Wall 
 
-DEBUG	   = #-DDEBUG -DDEBUG_Q -DDEBUG_SHM -DDEBUG_USER
-
-VB	   = #-DVERBOSE
+DEBUG	   = -DDEBUG -DDEBUG_Q -DDEBUG_SHM -DDEBUG_USER
+VB	   = -DVERBOSE
 
 .SUFFIXES: .c .o
 

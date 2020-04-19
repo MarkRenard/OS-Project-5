@@ -18,18 +18,6 @@
 #include "randomGen.h"
 #include "sharedMemory.h"
 
-#ifdef DEBUG_USER
-static void printTargets(int pid){
-	fprintf(stderr, "\n\tP%d HAS:\n", pid);
-
-	int i = 0;
-	for(; i < NUM_RESOURCES; i++){
-		fprintf(stderr, "\t\tP%d, R%d: %d\n", pid, i, targetHeld[i]);
-	}
-	
-}
-#endif
-
 // Prototypes
 static void signalTermination(int simPid);
 static bool requestResources(ResourceDescriptor *, Message *, int);
@@ -47,6 +35,18 @@ static char * shm;			// Shared memory region pointer
 static int targetHeld[NUM_RESOURCES];	// Number of each resource to be held
 static int requestMqId;			// Message queue id of request queue
 static int replyMqId;			// Message queue id of reply queue
+
+#ifdef DEBUG_USER
+static void printTargets(int pid){
+	fprintf(stderr, "\n\tP%d HAS:\n", pid);
+
+	int i = 0;
+	for(; i < NUM_RESOURCES; i++){
+		fprintf(stderr, "\t\tP%d, R%d: %d\n", pid, i, targetHeld[i]);
+	}
+	
+}
+#endif
 
 int main(int argc, char * argv[]){
 	exeName = argv[0];		// Sets exeName for perrorExit

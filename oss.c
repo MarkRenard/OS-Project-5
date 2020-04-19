@@ -133,15 +133,13 @@ void simulateResourceManagement(){
 	do {
 
 		// Waits for semaphore protecting system clock
-		pthread_mutex_lock(&systemClock->sem);		
-
 #ifdef DEBUG
 		fprintf(stderr, "\nIteration %d:\n", i++);
 		printPids(pidArray);
 		printTimeln(stderr, systemClock->time);
 #endif
 		// Launches user processes at random times
-		if (clockCompare(systemClock->time, timeToFork) >= 0){
+		if (clockCompare(getPTime(systemClock), timeToFork) >= 0){
 			 
 			// Launches process & records real pid if within limits
 			if (running < MAX_RUNNING && launched < MAX_LAUNCHED){
@@ -173,7 +171,7 @@ void simulateResourceManagement(){
 		}
 
 		// Detects and resolves deadlock at regular intervals
-		if (clockCompare(systemClock->time, timeToDetect) >= 0){
+		if (clockCompare(getPTime(systemClock), timeToDetect) >= 0){
 			logDeadlockDetection(systemClock->time);
 
 			// Resolves deadlock
@@ -187,9 +185,7 @@ void simulateResourceManagement(){
 		}
 
 		// Increments and unlocks the system clock
-		incrementClock(&systemClock->time, MAIN_LOOP_INCREMENT);
-
-		pthread_mutex_unlock(&systemClock->sem);
+		incrementPClock(systemClock, MAIN_LOOP_INCREMENT);
 
 		nanosleep(&SLEEP, NULL);
 
@@ -344,7 +340,12 @@ static void releaseResources(int * released, int simPid){
 	int r;
 	for (r = 0; r < NUM_RESOURCES; r++){
 		released[r] = resources[r].allocations[simPid];
-		resources[r].numAvailable += resources[r].allocations[simPid];
+
+		// Increases numAvailable if the resoruce is not shared
+		if (!resources[r].shareable){
+			resources[r].numAvailable += \
+				resources[r].allocations[simPid];
+		}
 		resources[r].allocations[simPid] = 0;
 	}
 }
@@ -360,6 +361,9 @@ static void waitForProcess(pid_t realPid){
 
         if (errno == ECHILD)
                 perrorExit("waited for non-existent child");
+#ifdef DEBUG
+	fprintf(stderr, " succeeded!\n");
+#endif
 }
 
 // Responds to a request for resources by granting it or enqueueing the request
@@ -451,9 +455,10 @@ static void grantRequest(Message * msg){
 #ifdef DEBUG
 	int prev = resources[msg->rNum].numAvailable;
 #endif
-	// Increeases allocation and decreases availablity
+	// Increeases allocation and if not shareable, decreases availability
 	resources[msg->rNum].allocations[msg->simPid] += msg->quantity;
-	resources[msg->rNum].numAvailable -= msg->quantity;
+	if (!resources[msg->rNum].shareable)
+		resources[msg->rNum].numAvailable -= msg->quantity;
 
 #ifdef DEBUG
 	fprintf(stderr, "Granting P%d request for %d of R%d - %d were"
@@ -505,7 +510,9 @@ static void processRelease(int simPid){
 			   systemClock->time);
 
 	resources[msg->rNum].allocations[simPid] -= msg->quantity;
-	resources[msg->rNum].numAvailable += msg->quantity;
+
+	if (!resources[msg->rNum].shareable)
+		resources[msg->rNum].numAvailable += msg->quantity;
 
 	msg->quantity = 0;
 	msg->type = VOID;
@@ -521,7 +528,7 @@ static void processRelease(int simPid){
 	sendMessage(replyMqId, "release confirmed", simPid + 1);
 }
 
-// This function calls perrorExit if any allocation < 0 or allocation > exiting
+// This function calls perrorExit if any allocation < 0 or allocation > existing
 static void validateState(char * functionName){
 	int i;
 	char buff[BUFF_SZ];
