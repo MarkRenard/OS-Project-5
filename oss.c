@@ -611,6 +611,8 @@ static void cleanUp(){
 	removeMessageQueue(requestMqId);
 	removeMessageQueue(replyMqId);
 
+	closeLogFile();
+
 	// Detatches from and removes shared memory
 	detach(shm);
 	removeSegment();

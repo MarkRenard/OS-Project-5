@@ -11,6 +11,9 @@
 // Opens the log file with name LOG_FILE_NAME or exits with an error message
 void openLogFile();
 
+// Closes the log file
+void closeLogFile();
+
 // Logs the detection of a resource request
 void logRequestDetection(int simPid, int resourceId, int count, Clock time);
 

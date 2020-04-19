@@ -20,6 +20,14 @@ void openLogFile(){
 		perrorExit("logging.c - failed to open log file");
 }
 
+// Closes the log file
+void closeLogFile(){
+	if (log != NULL){
+		if (fclose(log) == -1)
+			perrorExit("logging.c - error closing log file");
+	}
+}
+
 // Logs the detection of a resource request
 void logRequestDetection(int simPid, int resourceId, int count, Clock time){
 #ifdef VERBOSE
