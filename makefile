@@ -22,7 +22,7 @@ CC         = gcc
 FLAGS      = -g -lm -lpthread $(DEBUG) $(VB) -Wall 
 
 DEBUG	   = #-DDEBUG -DDEBUG_USER # -DDEBUG_Q -DDEBUG_SHM 
-VB	   = -DVERBOSE
+VB	   = #-DVERBOSE
 
 .SUFFIXES: .c .o
 

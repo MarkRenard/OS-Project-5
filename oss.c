@@ -70,11 +70,9 @@ int main(int argc, char * argv[]){
 
 	exeName = argv[0];	// Assigns exeName for perrorExit
 	assignSignalHandlers(); // Sets response to ctrl + C & alarm
-//	alarm(MAX_SECONDS);	// Limits total execution time
 	openLogFile();		// Opens file written to in logging.c
 
-	srand(time(NULL));
-//	srand(BASE_SEED - 1);   // Seeds pseudorandom number generator
+	srand(BASE_SEED - 1);   // Seeds pseudorandom number generator
 
 	// Creates shared memory region and gets pointers
 	getSharedMemoryPointers(&shm, &systemClock, &resources, &messages, 
@@ -93,10 +91,11 @@ int main(int argc, char * argv[]){
 		((long unsigned int)resources - (long unsigned int)systemClock));
 	fprintf(stderr, "messages - resources: %lu\n", 
 		((long unsigned int)messages - (long unsigned int)resources));
-	fprintf(stderr, "&resources[NUM_RESOURCES - 1] - resources: %lu\n\n",
-		((long unsigned int)&resources[NUM_RESOURCES - 1] \
-		- (long unsigned int)resources));
+	fprintf(stderr, "&messages[MAX_RUNNING - 1] - messages: %lu\n\n",
+		((long unsigned int)&messages[MAX_RUNNING - 1] \
+		- (long unsigned int)messages));
 #endif
+
 	initStats();
 
 	// Initializes system clock and shared arrays

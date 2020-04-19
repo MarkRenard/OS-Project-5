@@ -12,24 +12,24 @@
 
 
 // Miscelaneous
-#define NUM_RESOURCES 6	 		// Total number of resource classes
-#define MAX_RUNNING 5 	 		// Max number of running child processes
+#define NUM_RESOURCES 20 		// Total number of resource classes
+#define MAX_RUNNING 18 	 		// Max number of running child processes
 #define MAX_LAUNCHED 200		// Max total children launched
 
 #define	MIN_INST 1			// Minimum instances of each resource
 #define MAX_INST 10			// Maximum instances of each resource
 
-#define EMPTY (-1)			// pidArray value at unassigned index
+#define SHAREABLE_PROBABILITY 0.2	// Chance resource will be shareable
+
+#define MAX_LOG_LINES 100000		// Max number of lines in the log file
+#define ALLOC_PER_TABLE 20		// Number of granted requests per table
  
 #define BILLION 1000000000U		// The number of nanoseconds in a second
 #define MILLION 1000000U		// Number of nanoseconds per millisecond
 #define BUFF_SZ 100			// The size of character buffers 
 #define MSG_SZ 30			// Size of Message char arrays
 
-#define MAX_LOG_LINES 100000		// Max number of lines in the log file
-#define ALLOC_PER_TABLE 20		// Number of granted requests per table
-
-#define SHAREABLE_PROBABILITY 0.2	// Chance resource will be shareable
+#define EMPTY (-1)			// pidArray value at unassigned index
 
 
 // Used by oss.c
@@ -50,16 +50,11 @@
 
 #define LOG_FILE_NAME "oss_log"		// The name of the output file
 
-#define MAX_SECONDS 10		 	// Max total execution time of oss
-
 
 // Used by userProgram.c
 #define TERMINATION_PROBABILITY 0.1	// Chance of terminating
-#define REQUEST_PROBABILITY 0.9		// Chance of request instead of release
-/*
-#define MIN_RES MIN_INST		// Min quantity to request or release
-#define MAX_RES MAX_INST		// Max quantity to request or release
-*/
+#define REQUEST_PROBABILITY 0.8		// Chance of request instead of release
+
 #define MIN_CHECK_SEC 0			// Min time between decisions sec
 #define MIN_CHECK_NS 0			// Min time between decisions nanosec
 #define MAX_CHECK_SEC 0			// Max tmie between decisions sec

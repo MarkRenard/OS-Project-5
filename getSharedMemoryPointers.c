@@ -18,7 +18,28 @@ int getSharedMemoryPointers(char ** shm,  ProtectedClock ** systemClock,
 	int shmSize = sizeof(ProtectedClock) \
 		      + sizeof(ResourceDescriptor) * NUM_RESOURCES \
                       + sizeof(Message) * MAX_RUNNING;
-		      
+
+#ifdef DEBUG
+	ProtectedClock pc;
+	ResourceDescriptor rd;
+	Message msg;
+
+	fprintf(stderr, "sizeof(ProtectedClock): %lu\n" \
+			"sizeof(pc): %lu\n\n" \
+			"sizeof(ResourceDescriptor):%lu\n" \
+			"sizeof(rd): %lu\n\n" \
+			"sizeof(Message): %lu\n" \
+			"sizeof(msg): %lu\n\n",
+			sizeof(ProtectedClock),
+			sizeof(pc),
+			sizeof(ResourceDescriptor),
+			sizeof(rd),
+			sizeof(Message),
+			sizeof(msg));
+
+	fprintf(stderr, "shmSize: %d\n\n", shmSize);
+#endif
+	      
 	// Attaches to shared memory
         *shm = sharedMemory(shmSize, flags);
 
@@ -29,8 +50,8 @@ int getSharedMemoryPointers(char ** shm,  ProtectedClock ** systemClock,
 	*resources = (ResourceDescriptor *)(*shm + sizeof(ProtectedClock));
 
 	// Gets pointer to message array
-	*messages = (Message *)(*resources + sizeof(ResourceDescriptor) \
-		    * NUM_RESOURCES);
+	*messages = (Message *)( ((char*)(*resources)) \
+		     + (sizeof(ResourceDescriptor) * NUM_RESOURCES));
 
 	return shmSize;
 }

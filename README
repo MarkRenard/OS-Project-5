@@ -1,4 +1,4 @@
-CMPSCI 4760 Operating Systems - Assignment 5
+CMPSCI 4760 Operating Systems - Assignment 5 - Mark Renard
 
 In this assigment, oss launches processes at random times. These processes
 notify oss when they request or release resources or terminate. The master
@@ -6,11 +6,21 @@ process responds to requests by granting them when possible or enqueueing
 them, and periodically detects and resolves deadlock by killing processes
 until deadlock is resolved.
 
+The verbose setting can be enabled by building the project with the command
+
+	make VB=-DVERBOSE
+
+The name of the log file is oss_log by default. Project-specific constants are
+conveniently located in constants.h.
+
 
  * Notifications to oss *
 
-Communication between master and user processes is accomplished using message
-queues. The message queue with id requestMqId is used to send notifications to
+Because of an issue with IPC using shared memory, notifications to master
+from user processes are accomplished using message queues, as permitted by Dr. 
+Bhatia in an email. 
+
+The message queue with id requestMqId is used to send notifications to
 master, where the message type is the logical pid of the user process plus one
 (zero is not a valid type). Requests for resources are encoded as
 
@@ -23,34 +33,51 @@ These values are then decoded in oss with
 	quantity = encoded % (MAX_INST + 1)
 	rNum = encoded / (MAX_INST + 1)
 
-In the case of release notifications, the value is negated. To
-notify master that the process will terminate, the process sends a 0. After
-sending any message, user proceses wait for a reply via the replpyMqId queue.
+In the case of release notifications, the value is negated. To notify master 
+that the process will terminate, the process sends a 0. After sending any 
+message, user proceses wait for a reply via the replpyMqId queue.
 
 When the user process makes a request, it ensures that the quantity requested
 is not greater than the number of instances available for that resource class
-by checking resources[index].numInstances in shared memory.
+by checking resources[rNum].numInstances in shared memory.
 
 
  * Kill Policy *
 
 The first kill policy I devised was to simply kill the process with the greatest
 requested number of instances of a resource, but this criterion does not
-guarantee that the killed process will release any resources. The current kill 
-policy is to kill the first deadlocked process found that holds enough resources
-to meet a current outstanding request from another deadlocked process, if one 
-exists. Otherwise, the deadlocked process with the greatest number of instances
-of a single resource requested by another deadlocked process is killed (or one 
-tied for the greatest such allocation). The average percentage of processes 
-killed per deadlock is now around 20, down from about 40. This policy is 
-implemented in the function killAProcess in deadlockDetection.c.
+guarantee that the killed process will release any resources. 
+
+The current kill policy is to kill the first deadlocked process found that holds
+enough resources to meet a current outstanding request from another deadlocked 
+process, if one exists. Otherwise, the deadlocked process with the greatest 
+number of instances of a single resource requested by another deadlocked process
+is killed (or one tied for the greatest such allocation). The average percentage
+of processes killed per deadlock dropped dramatically after this change. This 
+policy is implemented in the function killAProcess in deadlockDetection.c.
 
 
- * Outstanding Issues *
+ * Challenges *
 
-I was unable to get changes to values in shared memory made by the user
-processes to be detected by oss. The interested reader may wish to build and
-run the commit with the message
+The values of NUM_RESOURCES and MAX_RUNNING in constants.h control the number
+of resource descriptors in shared memory and the maximum number of simultaneous
+user processes, and consequently the number of Message structs in shared
+memory. For execution tracing purposes, I found it useful to use lower numbers,
+but when I subsequently increased the values above 5 and 6, respectively, the
+program began segfaulting when initializing the first Message in the shared
+Message array.
+
+To get the address of the shared array of Message structs, I realized that I was
+adding NUM_RESOURCES * sizeof(ResourceDescriptor) to the resources pointer, 
+which is already a ResourceDescriptor pointer, meaning that it was already being
+multiplying by the size of a ResourceDescriptor. The resulting address was
+outside of shared memory for sufficiently large values of NUM_RESOURCES. Of 
+course, I fixed the formula.
+
+I originally switched to using message queues to notify oss because I was unable
+to get oss to detect changes to values in shared memory made by the user 
+processes. The interested reader may wish to build and run the commit with the 
+message
 
   "Implemented deadlock detection. BUG: userProgram changes to main [sic]
    memory not visible in oss"
@@ -60,11 +87,5 @@ wherein the stderr stream shows the value of
 	messages[index].type
 
 being changed in user processes, but always read as 0 in oss. The addition of 
-the volatile keyword to the messages pointer does not appear
-to help.
+the volatile keyword to the messages pointer does not appear to help.
 
-The values of NUM_RESOURCES and MAX_RUNNING in constants.h control the number
-of resource descriptors in shared memory and the maximum number of simultaneous
-user processes. Their present values are 6 and 5, respectively. If either one is
-increased, the program will segfault when initializing the first Message in the
-Message array in shared memory.
