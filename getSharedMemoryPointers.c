@@ -19,28 +19,7 @@ int getSharedMemoryPointers(char ** shm,  ProtectedClock ** systemClock,
 		      + sizeof(ResourceDescriptor) * NUM_RESOURCES \
                       + sizeof(Message) * MAX_RUNNING;
 
-#ifdef DEBUG
-	ProtectedClock pc;
-	ResourceDescriptor rd;
-	Message msg;
-
-	fprintf(stderr, "sizeof(ProtectedClock): %lu\n" \
-			"sizeof(pc): %lu\n\n" \
-			"sizeof(ResourceDescriptor):%lu\n" \
-			"sizeof(rd): %lu\n\n" \
-			"sizeof(Message): %lu\n" \
-			"sizeof(msg): %lu\n\n",
-			sizeof(ProtectedClock),
-			sizeof(pc),
-			sizeof(ResourceDescriptor),
-			sizeof(rd),
-			sizeof(Message),
-			sizeof(msg));
-
-	fprintf(stderr, "shmSize: %d\n\n", shmSize);
-#endif
-	      
-	// Attaches to shared memory
+ 	// Attaches to shared memory
         *shm = sharedMemory(shmSize, flags);
 
 	// Gets pointer to simulated system clock

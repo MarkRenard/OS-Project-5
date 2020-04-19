@@ -46,11 +46,7 @@ void addToFront(Queue * q, Message * msg){
 
 // Adds a message to the back of the queue
 void enqueue(Queue * q, Message * msg){
-#ifdef DEBUG_Q
-	fprintf(stderr, "\tenqueue(%02d): ", msg->simPid);
-	printQueue(stderr, q);
-	fprintf(stderr, " <- %02d\n", msg->simPid);
-#endif
+
 	if (msg->currentQueue != NULL)
 		perrorExit("Tried to enqueue msg with non-null currentQueue");
 
@@ -98,12 +94,6 @@ Message * dequeue(Queue * q){
 	returnVal->previous = NULL; 
 	returnVal->next = NULL;
 	returnVal->currentQueue = NULL;
-
-#ifdef DEBUG_Q
-	fprintf(stderr, "\tdequeue(): %02d <-", returnVal->simPid);
-	printQueue(stderr, q);
-	fprintf(stderr, "\n");
-#endif
 
 	q->count--;
 	return returnVal;

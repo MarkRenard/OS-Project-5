@@ -37,18 +37,6 @@ static int targetHeld[NUM_RESOURCES];	// Number of each resource to be held
 static int requestMqId;			// Message queue id of request queue
 static int replyMqId;			// Message queue id of reply queue
 
-#ifdef DEBUG_USER
-static void printTargets(int pid){
-	fprintf(stderr, "\n\tP%d HAS:\n", pid);
-
-	int i = 0;
-	for(; i < NUM_RESOURCES; i++){
-		fprintf(stderr, "\t\tP%d, R%d: %d\n", pid, i, targetHeld[i]);
-	}
-	
-}
-#endif
-
 int main(int argc, char * argv[]){
 	exeName = argv[0];		// Sets exeName for perrorExit
 	int simPid = atoi(argv[1]);	// Gets process's logical pid
@@ -74,16 +62,6 @@ int main(int argc, char * argv[]){
         replyMqId = getMessageQueue(REPLY_MQ_KEY, MQ_PERMS | IPC_CREAT);
 	char reply[BUFF_SZ];
 
-#ifdef DEBUG_USER
-	fprintf(stderr, "\n\tPROCESS P%d RUNNING!\n", simPid);
-/*	fprintf(stderr, "\tP%d SHM ADDRESS: %p\n", simPid, shm);
-	fprintf(stderr, "\tP%d CLOCK: %p\n", simPid, systemClock);
-	fprintf(stderr, "\tP%d RESOURCES: %p\n", simPid, resources);
-	fprintf(stderr, "\tP%d MESSAGES ADDRESS: %p\n\n", simPid, messages);
-*/	fprintf(stderr, "\tP%d DECISION TIME - %03d : %09d\n\n",
-		simPid, decisionTime.seconds, decisionTime.nanoseconds);
-#endif
-
 	// Repeatedly requests or releases resources or terminates
 	bool terminating = false;
 	bool msgSent = false;	
@@ -92,13 +70,7 @@ int main(int argc, char * argv[]){
 		// Decides when current time is at or after decision time
 		now = getPTime(systemClock);
 		if (clockCompare(now, decisionTime) >= 0){
-#ifdef DEBUG_USER
-			printTargets(simPid);
-	/*		fprintf(stderr, "\n\tP%d - MAKING DECISION AT " \
-				"%03d : %09d\n\n", simPid, now.seconds, 
-				now.nanoseconds);
-	*/
-#endif
+
 			// Updates decision time
 			incrementClock(&decisionTime, 
 					randomTime(MIN_CHECK, MAX_CHECK));
@@ -126,18 +98,11 @@ int main(int argc, char * argv[]){
 		// Waits for response to request
 		if (msgSent){
 			msgSent = false;
-#ifdef DEBUG_USER
-			fprintf(stderr, "\n\tP%d WAITING FOR REPLY QMSG\n", simPid);
-#endif
+
 			waitForMessage(replyMqId, reply, simPid + 1);
-#ifdef DEBUG_USER
-			fprintf(stderr, "\n\tP%d RECEIVED %s\n\n",
-				simPid, reply);
-#endif
+
 			if (strcmp(reply, KILL_MSG) == 0){
-#ifdef DEBUG_USER
-				fprintf(stderr, "\tPROCESS KILLED!!!\n");
-#endif
+
 				terminating = true;
 			}
 		}
@@ -146,16 +111,10 @@ int main(int argc, char * argv[]){
 	// Prepares to exit
 	detach(shm);
 
-#ifdef DEBUG_USER
-	fprintf(stderr, "\n\tPROCESS P%d TERMINATING!\n\n", simPid);
-#endif
 	return 0;
 }
 
 static void signalTermination(int simPid){
-#ifdef DEBUG_USER
-	fprintf(stderr, "\n\tPROCESS %d SIGNALING TERMINATION\n\n", simPid);
-#endif
 	char msgBuff[BUFF_SZ];
 	sprintf(msgBuff, "0");
 	sendMessage(requestMqId, msgBuff, simPid + 1);
@@ -192,12 +151,6 @@ static bool requestResources(ResourceDescriptor * resources,
 	sprintf(msgBuff, "%d", encoded);
 	sendMessage(requestMqId, msgBuff, simPid + 1);
 
-#ifdef DEBUG_USER
-	fprintf(stderr, "\n\tPROCESS %d REQUESTING %d OF R%d", simPid,
-		quantity, rNum);
-	fprintf(stderr, "\n\tPROCESS %d REQUESTING %d OF R%d", simPid,
-		encoded % (MAX_INST + 1), encoded / (MAX_INST + 1));
-#endif
 	return true;
 
 }
@@ -212,10 +165,7 @@ static bool releaseResources(ResourceDescriptor * resources,
 	
 	// Selects a held resource at random or returns if no resources held
 	if ((rNum = getRandomRNum()) == -1){
-#ifdef DEBUG_USER
-		fprintf(stderr, "\n\tPROCESS %d CAN'T RELEASE ANYTHING\n\n",
-			simPid);
-#endif
+
 		 return false;
 	}
 
@@ -232,13 +182,6 @@ static bool releaseResources(ResourceDescriptor * resources,
 	sprintf(msgBuff, "%d", encoded);
 	sendMessage(requestMqId, msgBuff, simPid + 1);
 
-#ifdef DEBUG_USER
-	// Ensures the encoding worked by printing release in two ways
-	fprintf(stderr, "\n\tPROCESS %d RELEASING %d OF R%d", simPid,
-		quantity, rNum);
-	fprintf(stderr, "\n\tPROCESS %d RELEASING %d OF R%d", simPid,
-		encoded % (MAX_INST + 1), encoded / (MAX_INST + 1));
-#endif
 	return true;
 
 }

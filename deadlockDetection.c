@@ -45,9 +45,7 @@ static bool deadlock ( const int*available, const int m, const int n, \
 
     for ( i = 0 ; i < n; finish[i++] = false );
 
-#ifdef DEBUG    
-    fprintf(stderr, "\n\nFinished sequence: <");
-#endif
+
     int p = 0;
     for ( ; p < n; p++ )   // For each process
     {
@@ -55,29 +53,21 @@ static bool deadlock ( const int*available, const int m, const int n, \
         if ( req_lt_avail ( request, work, p, m ) )
         {
             finish[p] = true;
-#ifdef DEBUG
-            fprintf(stderr, "p%d, ", p);
-#endif
+
             for ( i = 0 ; i < m; i++ )
                 work[i] += allocated[p*m+i];
             p = -1;
         }
         
     }
-#ifdef DEBUG
-    fprintf(stderr, ">\n");
 
-    fprintf(stderr, "Deadlock with processes <");
-#endif
     bool deadlock = false;
     int deadPids[MAX_RUNNING];
     i = 0;
     for ( p = 0; p < n; p++ )
         if ( ! finish[p] )
         {
-#ifdef DEBUG 
-           fprintf(stderr, "p%d, ", p);
-#endif
+
             deadlocked[p] = 1;
             deadPids[i++] = p;
             deadlock = true;
@@ -86,9 +76,7 @@ static bool deadlock ( const int*available, const int m, const int n, \
 
     // Prints deadlocked processes to the log file
     logDeadlockedProcesses(deadPids, i);
-#ifdef DEBUG
-    fprintf(stderr, ">\n");
-#endif
+
     
     return ( deadlock );
 }
@@ -151,9 +139,7 @@ static void killAProcess(pid_t * pidArray, int * deadlocked,
 
 	// Kills the process
 	killProcess(killPid, pidArray[killPid]);
-#ifdef DEBUG
-	printMatrixRep(stderr, resources);
-#endif
+
 	// Removes the pid from the array
 	pidArray[killPid] = EMPTY;
 
@@ -184,9 +170,7 @@ static int numRunning(pid_t * pidArray){
 // Detects and resolves deadlock - returns num killed and removes pids
 int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 		    Message * messages){
-#ifdef DEBUG
-	fprintf(stderr, "Resolving Deadlock\n");
-#endif
+
 	int allocated[NUM_RESOURCES * MAX_RUNNING];	// Resource allocation
 	int request[NUM_RESOURCES * MAX_RUNNING];	// Current requests
 	int available[NUM_RESOURCES];			// Available resources
@@ -198,9 +182,7 @@ int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 
 	// Initializes vectors
 	updateMatrices(resources, allocated, request, available, deadlocked);
-#ifdef DEBUG
-	printMatrices(stderr, allocated, request, available);
-#endif
+
 	// If deadlock exists, repeatedly kills processes until resolved
 	bool deadlockDetected = false;
 	while(deadlock(available, NUM_RESOURCES, MAX_RUNNING, request,
@@ -211,18 +193,14 @@ int resolveDeadlock(pid_t * pidArray, ResourceDescriptor * resources,
 			logResolutionAttempt();
 			deadlockDetected = true;
 		}
-#ifdef DEBUG
-		fprintf(stderr, "\t\t\t\t\t!!!DEADLOCK DETECTED!!!\n");
-#endif
+
 		killAProcess(pidArray, deadlocked, messages, resources);
 		killed++;
 
 		// Updates vectors	
 		updateMatrices(resources, allocated, request, available, deadlocked);
 	}
-#ifdef DEBUG
-	fprintf(stderr, "End of deadlock resolution. Killed: %d\n", killed);
-#endif
+
 	if (deadlockDetected)
 		logResolutionSuccess(killed, runningAtStart);
 

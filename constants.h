@@ -72,7 +72,7 @@
 #define REPLY_MQ_KEY 38257848		// Message queue key for interrupts
 #define MQ_PERMS (S_IRUSR | S_IWUSR)	// Message queue permissions
 
-#define BASE_SEED 8853984		// Used in calls to srand
+#define BASE_SEED 39393984		// Used in calls to srand
 
 #define KILL_MSG "k"			// Message oss uses to kill processes
 

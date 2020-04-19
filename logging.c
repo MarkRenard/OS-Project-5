@@ -65,9 +65,9 @@ void logEnqueue(int simPid, int quantity, int rNum, int available){
 }
 
 // Prints the resource allocation table every 20 requests by default
-void logTable(ResourceDescriptor * resources){
+void logTable(const ResourceDescriptor * resources){
 #ifdef VERBOSE
-	if (++lines > MAX_LOG_LINES) return;
+	if (lines >= MAX_LOG_LINES) return;
 	static int callCount = 0;	// Times called since last print
 
 	// Restricts printing to once every 20 request by default
@@ -80,9 +80,12 @@ void logTable(ResourceDescriptor * resources){
 	
 	// Prints header
 	fprintf(log, "\n     ");
+	lines++;
+
 	for (m = 0; m < NUM_RESOURCES; m++){
 		fprintf(log, "R%02d ", m);
 	}
+
 	fprintf(log, "\n");
 	lines++;
 
