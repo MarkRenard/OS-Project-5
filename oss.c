@@ -49,10 +49,12 @@ static void cleanUpAndExit(int param);
 static void cleanUp();
 
 // Constants
-static const Clock DETECTION_INTERVAL = {1, 0};
+static const Clock DETECTION_INTERVAL = {DETECTION_INTERVAL_SEC, 
+					 DETECTION_INTERVAL_NS};
 static const Clock MIN_FORK_TIME = {MIN_FORK_TIME_SEC, MIN_FORK_TIME_NS};
 static const Clock MAX_FORK_TIME = {MAX_FORK_TIME_SEC, MAX_FORK_TIME_NS};
-static const Clock MAIN_LOOP_INCREMENT = {0, 50 * MILLION};
+static const Clock MAIN_LOOP_INCREMENT = {LOOP_INCREMENT_SEC,
+					  LOOP_INCREMENT_NS};
 static const struct timespec SLEEP = {0, 500000};
 
 // Static global variables
@@ -79,7 +81,7 @@ int main(int argc, char * argv[]){
 				IPC_CREAT);
 
         // Creates message queues
-        requestMqId = getMessageQueue(DISPATCH_MQ_KEY, MQ_PERMS | IPC_CREAT);
+        requestMqId = getMessageQueue(REQUEST_MQ_KEY, MQ_PERMS | IPC_CREAT);
         replyMqId = getMessageQueue(REPLY_MQ_KEY, MQ_PERMS | IPC_CREAT);
 
 #ifdef DEBUG

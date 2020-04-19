@@ -26,9 +26,10 @@ static int getRandomRNum();
 static bool aSecondHasPassed(Clock now, Clock startTime);
 
 // Constants
-static const Clock MIN_INC = {0, 0};
-static const Clock MAX_INC = {0, 250 * MILLION};
-static const Clock MIN_RUN_TIME = {1, 0};
+static const Clock MIN_CHECK = {MIN_CHECK_SEC, MIN_CHECK_NS};
+static const Clock MAX_CHECK = {MAX_CHECK_SEC, MAX_CHECK_NS};
+static const Clock MIN_RUN_TIME = {MIN_RUN_TIME_SEC, MIN_RUN_TIME_NS};
+static const Clock CLOCK_UPDATE = {CLOCK_UPDATE_SEC, CLOCK_UPDATE_NS};
 
 // Static global
 static char * shm;			// Shared memory region pointer
@@ -69,7 +70,7 @@ int main(int argc, char * argv[]){
 	decisionTime = startTime;
 
 	// Gets message queues
-        requestMqId = getMessageQueue(DISPATCH_MQ_KEY, MQ_PERMS | IPC_CREAT);
+        requestMqId = getMessageQueue(REQUEST_MQ_KEY, MQ_PERMS | IPC_CREAT);
         replyMqId = getMessageQueue(REPLY_MQ_KEY, MQ_PERMS | IPC_CREAT);
 	char reply[BUFF_SZ];
 
@@ -100,7 +101,7 @@ int main(int argc, char * argv[]){
 #endif
 			// Updates decision time
 			incrementClock(&decisionTime, 
-					randomTime(MIN_INC, MAX_INC));
+					randomTime(MIN_CHECK, MAX_CHECK));
 
 			// Decides whether to terminate
 			if (aSecondHasPassed(now, startTime) \
@@ -119,8 +120,7 @@ int main(int argc, char * argv[]){
 			}
 
 			// Increments the protected system clock
-			incrementPClock(systemClock, randomTime(MIN_INC, 
-								MAX_INC));
+			incrementPClock(systemClock, CLOCK_UPDATE);
 		}
 
 		// Waits for response to request

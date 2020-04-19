@@ -101,32 +101,61 @@ static void initVector(int * vector, int size, int n){
 	}
 }
 
-// Kills the process with the greatest request and removes it from the pidArray
+// Kills process with resources that meet a request or the greatest allocation
 static void killAProcess(pid_t * pidArray, int * deadlocked, 
 			 Message * messages,
 			 ResourceDescriptor * resources){
-	int p;			// Process index variable
-	int maxRequest = 0;	// Greatest quantity of a resource requested
-	int greediest = -1;	// Index of the process with greatest request
+	int killPid = -1;	// Logical pid of process to kill
+	int maxAlloc = 0;	// Greatest num allocated of a needed resource
+	int maxPid = -1;	// simPid of process with greatest allocation
+
+	int quant;		// Quantity of requested resource
+	int rNum;		// Index of requested resource
+	int p, k;		// Index variables
 
 	// Loops through all logical pids
 	for (p = 0; p < MAX_RUNNING; p++){
+		if (deadlocked[p]){
 
-		// Selects deadlocked processes
-		if (deadlocked[p] && messages[p].quantity > maxRequest){
-			maxRequest = messages[p].quantity;
-			greediest = p;
+			// Gets request values
+			rNum = messages[p].rNum;
+			quant = messages[p].quantity;
+
+			// Looks for deadlocked process that can meet request
+			for (k = 0; k < MAX_RUNNING; k++){
+			    if (deadlocked[k] && k != p){
+
+				// Checks for new maximum allocation		
+				if (resources[rNum].allocations[k] > maxAlloc){
+				    maxAlloc = resources[rNum].allocations[k];
+				    maxPid = k;
+				}
+
+				// Breaks if process k has enough
+				if (resources[rNum].allocations[k] >= quant){
+				    killPid = k;
+				    k = MAX_RUNNING;
+				    p = MAX_RUNNING;
+				}
+			    }
+			}
 		}
 	}
 
+	// Sets killPid if process with sufficient resources wasn't found
+	if (killPid == -1) killPid = maxPid;
+
+	// This should never happen
+	if (killPid == -1) perrorExit("killAProcess - no pid selected");
+	if (pidArray[killPid] == EMPTY) perrorExit("killAProcess - bad pid");
+
 	// Kills the process
-	killProcess(greediest, pidArray[greediest]);
+	killProcess(killPid, pidArray[killPid]);
 #ifdef DEBUG
 	printMatrixRep(stderr, resources);
 #endif
 	// Removes the pid from the array
-	if (pidArray[greediest] == EMPTY) perrorExit("killAProcess - no pid");
-	pidArray[greediest] = EMPTY;
+	pidArray[killPid] = EMPTY;
 
 
 	
